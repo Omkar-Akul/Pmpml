@@ -1,32 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alandi Bus Finder – Pune PMPML</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
 <header>
-  <div class="logo-icon">🚌</div>
-  <div class="logo-text">
-    <h1>AlandiBus</h1>
-    <p>Pune PMPML Route Finder</p>
+  <div class="logo-group">
+    <div class="logo-icon"><i data-lucide="bus" stroke-width="2.5"></i></div>
+    <div class="logo-text">
+      <h1>AlandiBus</h1>
+      <p>Pune PMPML</p>
+    </div>
   </div>
-  <div class="badge">🟢 Live</div>
-  <div class="lang-toggle">
-    <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
-    <button class="lang-btn" id="btn-mr" onclick="setLang('mr')">मर</button>
-  </div>
+  <div class="badge"><div class="live-dot"></div> <span id="badge-text">Live</span></div>
 </header>
 
-<section class="hero">
-  <div class="hero-tag">✦ Smart Route Search</div>
-  <h2>Find your bus,<br><span>instantly.</span></h2>
-  <p>Search any stop in Alandi's PMPML network and get direct bus routes.</p>
-</section>
+<div class="hero-container">
+  <section class="hero">
+    <div class="hero-tag"><i data-lucide="sparkles" class="inline-icon"></i> <span id="hero-tag-text">Smart Route Search</span></div>
+    <h2 id="hero-title">Find your bus,<br><span>instantly.</span></h2>
+    <p id="hero-desc">Search any stop in Alandi's PMPML network and get direct bus routes.</p>
+  </section>
+  <div class="hero-image">
+    <img src="bus_image.png" alt="Premium Luxury Bus">
+  </div>
+</div>
 
 <div class="stats">
   <div class="stat">
@@ -47,29 +52,29 @@
   <div class="search-card">
     <div class="search-card-header">
       <div class="dot"></div>
-      <span>Plan Your Journey</span>
+      <span id="card-header-text">Plan Your Journey</span>
     </div>
 
     <div class="field-group">
       <div class="field">
-        <div class="field-label">From – Start Location</div>
-        <span class="field-icon">📍</span>
-        <input type="text" id="from-input" placeholder="Enter your starting stop..." autocomplete="off">
+        <div class="field-label" id="from-label">Pickup Location</div>
+        <div class="field-icon from-icon"></div>
+        <input type="text" id="from-input" placeholder="Enter pickup stop..." autocomplete="off">
         <div class="autocomplete-list" id="from-list"></div>
       </div>
 
       <div class="connector"><div class="connector-line"></div></div>
 
       <div class="field">
-        <div class="field-label">To – Destination</div>
-        <span class="field-icon">🏁</span>
-        <input type="text" id="to-input" placeholder="Enter your destination stop..." autocomplete="off">
+        <div class="field-label" id="to-label">Dropoff Location</div>
+        <div class="field-icon to-icon"></div>
+        <input type="text" id="to-input" placeholder="Enter dropoff stop..." autocomplete="off">
         <div class="autocomplete-list" id="to-list"></div>
       </div>
     </div>
 
     <button class="search-btn" onclick="searchBuses()">
-      🔍 Find Buses
+      <span id="search-btn-text">Find Buses</span> <i data-lucide="arrow-right"></i>
     </button>
   </div>
 </section>
@@ -77,7 +82,7 @@
 <section class="results-section" id="results-section">
   <div class="results-header">
     <div>
-      <div class="results-title" id="results-title">Available Routes</div>
+      <div class="results-title" id="results-title">Available Rides</div>
       <div class="route-summary" id="route-summary"></div>
     </div>
     <div class="results-count" id="results-count">0 found</div>
@@ -86,8 +91,38 @@
 </section>
 
 <footer>
-  <p>Alandi PMPML Bus Finder &nbsp;·&nbsp; Pune, Maharashtra &nbsp;·&nbsp; Data sourced from official route dataset</p>
+  <p id="footer-text">Alandi PMPML Bus Finder &nbsp;·&nbsp; Pune, Maharashtra &nbsp;·&nbsp; Data sourced from official route dataset</p>
 </footer>
+
+<!-- Settings Button (Bottom Left) -->
+<button class="settings-btn" id="settings-btn" aria-label="Settings">
+  <i data-lucide="settings"></i>
+</button>
+
+<!-- Settings Panel -->
+<div class="settings-overlay" id="settings-overlay"></div>
+<div class="settings-panel" id="settings-panel">
+  <div class="settings-header">
+    <h3 id="settings-title">Settings</h3>
+    <button class="close-settings" id="close-settings"><i data-lucide="x"></i></button>
+  </div>
+  <div class="settings-content">
+    <div class="setting-item">
+      <span id="setting-theme">Theme</span>
+      <div class="theme-toggle" id="theme-toggle">
+        <button class="theme-btn" data-theme-val="light"><i data-lucide="sun"></i> <span id="theme-light">Light</span></button>
+        <button class="theme-btn active" data-theme-val="dark"><i data-lucide="moon"></i> <span id="theme-dark">Dark</span></button>
+      </div>
+    </div>
+    <div class="setting-item">
+      <span id="setting-lang">Language</span>
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-en" onclick="setLang('en')">English</button>
+        <button class="lang-btn" id="btn-mr" onclick="setLang('mr')">मराठी</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="data.js"></script>
 <script src="script.js"></script>
