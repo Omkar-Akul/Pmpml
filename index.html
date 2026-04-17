@@ -503,12 +503,43 @@
     border-top: 1px solid var(--border);
   }
 
+  /* LANGUAGE TOGGLE */
+  .lang-toggle {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 30px;
+    padding: 4px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .lang-btn {
+    padding: 6px 13px;
+    border: none;
+    border-radius: 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    background: transparent;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+  }
+  .lang-btn.active {
+    background: linear-gradient(135deg, var(--accent), #ef4444);
+    color: white;
+    box-shadow: 0 2px 10px rgba(249,115,22,0.4);
+  }
+
   /* MOBILE */
   @media (max-width: 600px) {
-    header { padding: 20px 16px 0; }
+    header { padding: 20px 16px 0; flex-wrap: wrap; gap: 10px; }
     .search-card { padding: 20px 16px; }
     .hero { padding: 40px 16px 30px; }
     .stats { gap: 24px; }
+    .badge { display: none; }
   }
 </style>
 </head>
@@ -521,6 +552,10 @@
     <p>Pune PMPML Route Finder</p>
   </div>
   <div class="badge">🟢 Live</div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" id="btn-mr" onclick="setLang('mr')">मर</button>
+  </div>
 </header>
 
 <section class="hero">
@@ -681,7 +716,7 @@ function searchBuses() {
   const to = toSelected || toInput.value.trim();
 
   if (!from || !to) {
-    alert('Please enter both start and destination stops.');
+    alert(LANG[currentLang].alertBoth);
     return;
   }
 
@@ -730,13 +765,13 @@ function displayResults(results, from, to) {
   section.classList.add('show');
   section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  count.textContent = results.length + (results.length === 1 ? ' route' : ' routes');
+  const t = LANG[currentLang]; count.textContent = results.length + (results.length === 1 ? t.routeCount1 : t.routeCountN);
   count.style.background = results.length > 0 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
   count.style.color = results.length > 0 ? 'var(--green)' : '#f87171';
   count.style.borderColor = results.length > 0 ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)';
 
   summary.textContent = from + ' → ' + to;
-  title.textContent = results.length > 0 ? 'Available Buses' : 'No Direct Routes';
+  title.textContent = results.length > 0 ? t.resultsTitle : t.noResultsTitle;
 
   container.innerHTML = '';
 
@@ -744,8 +779,8 @@ function displayResults(results, from, to) {
     container.innerHTML = `
       <div class="no-results">
         <div class="icon">🔍</div>
-        <h3>No direct buses found</h3>
-        <p>No direct route connects these stops.<br>Try nearby stops or check stop names.</p>
+        <h3>${LANG[currentLang].noDirectMsg}</h3>
+        <p>${LANG[currentLang].noDirectSub}</p>
       </div>`;
     return;
   }
@@ -756,7 +791,7 @@ function displayResults(results, from, to) {
     card.style.animationDelay = (i * 0.07) + 's';
 
     const dirClass = r.direction === 'OUT' ? 'dir-out' : 'dir-in';
-    const dirLabel = r.direction === 'OUT' ? '→ Outbound' : '← Inbound';
+    const tl = LANG[currentLang]; const dirLabel = r.direction === 'OUT' ? tl.outbound : tl.inbound;
 
     card.innerHTML = `
       <div class="bus-card-top">
@@ -769,27 +804,147 @@ function displayResults(results, from, to) {
       <div class="journey">
         <div class="journey-row">
           <div class="journey-dot from"></div>
-          <span class="journey-label">FROM</span>
+          <span class="journey-label">${tl.fromLabel2}</span>
           <span class="journey-stop">${r.fromStop}</span>
-          <span class="journey-order">Stop #${r.fromOrder}</span>
+          <span class="journey-order">${tl.stopNum}${r.fromOrder}</span>
         </div>
         <div class="journey-row">
           <div class="journey-line" style="margin-left:4px; margin-top:-4px; margin-bottom:-4px;"></div>
         </div>
         ${r.stopsBetween > 0 ? `
         <div class="stops-between">
-          <span class="stops-between-badge">↕ ${r.stopsBetween} stop${r.stopsBetween>1?'s':''} in between</span>
+          <span class="stops-between-badge">↕ ${r.stopsBetween}${r.stopsBetween>1 ? tl.stopBetweenN : tl.stopBetween1}</span>
         </div>` : ''}
         <div class="journey-row">
           <div class="journey-dot to"></div>
-          <span class="journey-label">TO</span>
+          <span class="journey-label">${tl.toLabel2}</span>
           <span class="journey-stop">${r.toStop}</span>
-          <span class="journey-order">Stop #${r.toOrder}</span>
+          <span class="journey-order">${tl.stopNum}${r.toOrder}</span>
         </div>
       </div>
     `;
     container.appendChild(card);
   });
+}
+
+
+// ===== TRANSLATIONS =====
+const LANG = {
+  en: {
+    pageTitle: 'Alandi Bus Finder – Pune PMPML',
+    logoSub: 'Pune PMPML Route Finder',
+    badge: '🟢 Live',
+    heroTag: '✦ Smart Route Search',
+    heroH2Line1: 'Find your bus,',
+    heroH2Line2: 'instantly.',
+    heroDesc: "Search any stop in Alandi's PMPML network and get direct bus routes.",
+    statBuses: 'Bus Routes',
+    statStops: 'Bus Stops',
+    statDirections: 'Directions',
+    cardHeader: 'Plan Your Journey',
+    fromLabel: 'From – Start Location',
+    fromPlaceholder: 'Enter your starting stop...',
+    toLabel: 'To – Destination',
+    toPlaceholder: 'Enter your destination stop...',
+    searchBtn: '🔍 Find Buses',
+    resultsTitle: 'Available Buses',
+    noResultsTitle: 'No Direct Routes',
+    alertBoth: 'Please enter both start and destination stops.',
+    routeCount1: ' route',
+    routeCountN: ' routes',
+    outbound: '→ Outbound',
+    inbound: '← Inbound',
+    fromLabel2: 'FROM',
+    toLabel2: 'TO',
+    stopNum: 'Stop #',
+    stopBetween1: ' stop in between',
+    stopBetweenN: ' stops in between',
+    noDirectMsg: 'No direct buses found',
+    noDirectSub: 'No direct route connects these stops.<br>Try nearby stops or check stop names.',
+    footerText: 'Alandi PMPML Bus Finder &nbsp;·&nbsp; Pune, Maharashtra &nbsp;·&nbsp; Data sourced from official route dataset',
+  },
+  mr: {
+    pageTitle: 'अलंदी बस शोधक – पुणे PMPML',
+    logoSub: 'पुणे PMPML मार्ग शोधक',
+    badge: '🟢 सुरू',
+    heroTag: '✦ स्मार्ट मार्ग शोध',
+    heroH2Line1: 'तुमची बस शोधा,',
+    heroH2Line2: 'त्वरित.',
+    heroDesc: 'अलंदीच्या PMPML नेटवर्कमध्ये कोणताही थांबा शोधा आणि थेट बस मार्ग मिळवा.',
+    statBuses: 'बस मार्ग',
+    statStops: 'बस थांबे',
+    statDirections: 'दिशा',
+    cardHeader: 'तुमचा प्रवास नियोजित करा',
+    fromLabel: 'कोठून – सुरुवातीचे ठिकाण',
+    fromPlaceholder: 'सुरुवातीचा थांबा टाका...',
+    toLabel: 'कोठे – गंतव्य ठिकाण',
+    toPlaceholder: 'गंतव्य थांबा टाका...',
+    searchBtn: '🔍 बस शोधा',
+    resultsTitle: 'उपलब्ध बस',
+    noResultsTitle: 'थेट मार्ग नाही',
+    alertBoth: 'कृपया सुरुवात आणि गंतव्य दोन्ही थांबे टाका.',
+    routeCount1: ' मार्ग',
+    routeCountN: ' मार्ग',
+    outbound: '→ बाहेर जाणारी',
+    inbound: '← आत येणारी',
+    fromLabel2: 'येथून',
+    toLabel2: 'येथे',
+    stopNum: 'थांबा #',
+    stopBetween1: ' थांबा मध्ये',
+    stopBetweenN: ' थांबे मध्ये',
+    noDirectMsg: 'थेट बस आढळली नाही',
+    noDirectSub: 'या थांब्यांमध्ये कोणताही थेट मार्ग नाही.<br>जवळचे थांबे वापरून पहा.',
+    footerText: 'अलंदी PMPML बस शोधक &nbsp;·&nbsp; पुणे, महाराष्ट्र &nbsp;·&nbsp; अधिकृत मार्ग डेटावरून',
+  }
+};
+
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  const t = LANG[lang];
+  const isMarathi = lang === 'mr';
+
+  // Toggle button styles
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-mr').classList.toggle('active', lang === 'mr');
+
+  // Page title
+  document.title = t.pageTitle;
+  document.documentElement.lang = lang;
+
+  // Header
+  document.querySelector('.logo-text p').textContent = t.logoSub;
+  document.querySelector('.badge').innerHTML = t.badge;
+
+  // Hero
+  document.querySelector('.hero-tag').textContent = t.heroTag;
+  document.querySelector('.hero h2').innerHTML = t.heroH2Line1 + '<br><span>' + t.heroH2Line2 + '</span>';
+  document.querySelector('.hero p').textContent = t.heroDesc;
+
+  // Stats
+  document.querySelectorAll('.stat-label')[0].textContent = t.statBuses;
+  document.querySelectorAll('.stat-label')[1].textContent = t.statStops;
+  document.querySelectorAll('.stat-label')[2].textContent = t.statDirections;
+
+  // Search card
+  document.querySelector('.search-card-header span').textContent = t.cardHeader;
+  document.querySelectorAll('.field-label')[0].textContent = t.fromLabel;
+  document.getElementById('from-input').placeholder = t.fromPlaceholder;
+  document.querySelectorAll('.field-label')[1].textContent = t.toLabel;
+  document.getElementById('to-input').placeholder = t.toPlaceholder;
+  document.querySelector('.search-btn').innerHTML = t.searchBtn;
+
+  // Footer
+  document.querySelector('footer p').innerHTML = t.footerText;
+
+  // Results title if visible
+  const resultsSection = document.getElementById('results-section');
+  if (resultsSection.classList.contains('show')) {
+    const currentTitle = document.getElementById('results-title').textContent;
+    const wasAvailable = currentTitle === LANG.en.resultsTitle || currentTitle === LANG.mr.resultsTitle;
+    document.getElementById('results-title').textContent = wasAvailable ? t.resultsTitle : t.noResultsTitle;
+  }
 }
 
 // Keyboard enter on button
