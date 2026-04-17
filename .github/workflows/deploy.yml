@@ -1,0 +1,88 @@
+name: Deploy to GitHub Pages
+
+# Runs on every push to main and can also be triggered manually.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Required permissions for GitHub Pages OIDC deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment runs at a time; in-progress runs are NOT cancelled so
+# we never leave the site in a half-deployed state.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Inject Firebase credentials from GitHub Secrets
+        # Substitutes every __PLACEHOLDER__ in firebase-config.js with the
+        # corresponding GitHub Secret.  The file is modified only in the
+        # runner's workspace – the real values are never stored in git.
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+        run: |
+          sed -i \
+            "s|__FIREBASE_API_KEY__|${FIREBASE_API_KEY}|g" \
+            firebase-config.js
+          sed -i \
+            "s|__FIREBASE_AUTH_DOMAIN__|${FIREBASE_AUTH_DOMAIN}|g" \
+            firebase-config.js
+          sed -i \
+            "s|__FIREBASE_PROJECT_ID__|${FIREBASE_PROJECT_ID}|g" \
+            firebase-config.js
+          sed -i \
+            "s|__FIREBASE_STORAGE_BUCKET__|${FIREBASE_STORAGE_BUCKET}|g" \
+            firebase-config.js
+          sed -i \
+            "s|__FIREBASE_MESSAGING_SENDER_ID__|${FIREBASE_MESSAGING_SENDER_ID}|g" \
+            firebase-config.js
+          sed -i \
+            "s|__FIREBASE_APP_ID__|${FIREBASE_APP_ID}|g" \
+            firebase-config.js
+          sed -i \
+            "s|__FIREBASE_MEASUREMENT_ID__|${FIREBASE_MEASUREMENT_ID}|g" \
+            firebase-config.js
+
+      - name: Verify all placeholders were replaced
+        run: |
+          if grep -q '__FIREBASE_' firebase-config.js; then
+            echo "ERROR: One or more Firebase placeholders were not replaced."
+            echo "Make sure all required GitHub Secrets are set (see README.md)."
+            grep '__FIREBASE_' firebase-config.js
+            exit 1
+          fi
+          echo "All Firebase placeholders replaced successfully."
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Deploy the entire repository root as the site.
+          path: "."
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
