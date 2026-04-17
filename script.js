@@ -1,7 +1,10 @@
-// Build unique stop index
-const ALL_STOPS = [...new Set(
-  BUS_DATA.flatMap(r => r.stops.map(s => s.name))
-)].sort();
+let ALL_STOPS = [];
+
+function updateAllStops(lang) {
+  ALL_STOPS = [...new Set(
+    BUS_DATA.flatMap(r => r.stops.map(s => lang === 'mr' && s.name_mr ? s.name_mr : s.name))
+  )].sort();
+}
 
 let fromSelected = '';
 let toSelected = '';
@@ -146,11 +149,16 @@ function searchBuses() {
 
   BUS_DATA.forEach(route => {
     const stops = route.stops;
-    const fromIdx = stops.findIndex(s => s.name.toLowerCase() === fromLower);
-    const toIdx = stops.findIndex(s => s.name.toLowerCase() === toLower);
     
-    const fromIdxPartial = fromIdx === -1 ? stops.findIndex(s => s.name.toLowerCase().includes(fromLower)) : fromIdx;
-    const toIdxPartial = toIdx === -1 ? stops.findIndex(s => s.name.toLowerCase().includes(toLower)) : toIdx;
+    // Get the name according to current language
+    const getName = (s) => (currentLang === 'mr' && s.name_mr) ? s.name_mr : s.name;
+    const getRouteName = (r) => (currentLang === 'mr' && r.route_mr) ? r.route_mr : r.route;
+
+    const fromIdx = stops.findIndex(s => getName(s).toLowerCase() === fromLower);
+    const toIdx = stops.findIndex(s => getName(s).toLowerCase() === toLower);
+    
+    const fromIdxPartial = fromIdx === -1 ? stops.findIndex(s => getName(s).toLowerCase().includes(fromLower)) : fromIdx;
+    const toIdxPartial = toIdx === -1 ? stops.findIndex(s => getName(s).toLowerCase().includes(toLower)) : toIdx;
 
     const fi = fromIdx !== -1 ? fromIdx : fromIdxPartial;
     const ti = toIdx !== -1 ? toIdx : toIdxPartial;
@@ -158,11 +166,11 @@ function searchBuses() {
     if (fi !== -1 && ti !== -1 && fi < ti) {
       results.push({
         bus: route.bus,
-        routeName: route.route,
+        routeName: getRouteName(route),
         direction: route.direction,
-        fromStop: stops[fi].name,
+        fromStop: getName(stops[fi]),
         fromOrder: stops[fi].order,
-        toStop: stops[ti].name,
+        toStop: getName(stops[ti]),
         toOrder: stops[ti].order,
         stopsBetween: ti - fi - 1,
         allStops: stops
@@ -335,6 +343,14 @@ let currentLang = 'en';
 
 function setLang(lang) {
   currentLang = lang;
+  updateAllStops(lang);
+  
+  // Clear inputs to prevent cross-language mismatch
+  document.getElementById('from-input').value = '';
+  document.getElementById('to-input').value = '';
+  fromSelected = '';
+  toSelected = '';
+
   const t = LANG[lang];
 
   // Toggle button styles
