@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="style.css">
 <!-- Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest"></script>
+<!-- Firebase Compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -19,7 +23,14 @@
       <p>Pune PMPML</p>
     </div>
   </div>
-  <div class="badge"><div class="live-dot"></div> <span id="badge-text">Live</span></div>
+  <div class="header-actions">
+    <div class="badge"><div class="live-dot"></div> <span id="badge-text">Live</span></div>
+    <button class="login-header-btn" id="login-header-btn">
+      <div class="user-avatar" id="user-avatar" style="display:none;"></div>
+      <i data-lucide="user" id="user-icon-default"></i>
+      <span id="login-text">Login</span>
+    </button>
+  </div>
 </header>
 
 <div class="hero-container">
@@ -94,6 +105,46 @@
   <p id="footer-text">Alandi PMPML Bus Finder &nbsp;·&nbsp; Pune, Maharashtra &nbsp;·&nbsp; Data sourced from official route dataset</p>
 </footer>
 
+<!-- Auth & Booking Modals -->
+<div class="modal-overlay" id="auth-overlay"></div>
+<div class="auth-modal" id="auth-modal">
+  <button class="close-modal" id="close-auth"><i data-lucide="x"></i></button>
+  <div class="auth-content">
+    <div class="auth-icon"><i data-lucide="shield-check"></i></div>
+    <h3 id="auth-title">Login to Book</h3>
+    <p id="auth-desc">Sign in securely with Google to book your bus tickets instantly.</p>
+    <button class="google-login-btn" id="google-login-btn">
+      <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2400/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      <span id="google-btn-text">Continue with Google</span>
+    </button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="booking-overlay"></div>
+<div class="booking-modal" id="booking-modal">
+  <button class="close-modal" id="close-booking"><i data-lucide="x"></i></button>
+  <div class="booking-content">
+    <h3 id="booking-title">Confirm Booking</h3>
+    <div class="booking-details" id="booking-details">
+      <!-- Injected details -->
+    </div>
+    <div class="passenger-count">
+      <label id="passengers-label">Passengers</label>
+      <div class="count-controls">
+        <button class="icon-btn" id="dec-passenger"><i data-lucide="minus"></i></button>
+        <span id="passenger-num">1</span>
+        <button class="icon-btn" id="inc-passenger"><i data-lucide="plus"></i></button>
+      </div>
+    </div>
+    <button class="confirm-book-btn" id="confirm-book-btn">Confirm Ticket</button>
+  </div>
+</div>
+
 <!-- Settings Button (Bottom Left) -->
 <button class="settings-btn" id="settings-btn" aria-label="Settings">
   <i data-lucide="settings"></i>
@@ -124,6 +175,7 @@
   </div>
 </div>
 
+<script src="firebase-config.js"></script>
 <script src="data.js"></script>
 <script src="script.js"></script>
 </body>

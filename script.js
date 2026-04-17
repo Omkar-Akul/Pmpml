@@ -255,6 +255,11 @@ function displayResults(results, from, to) {
           </div>
         </div>
       </div>
+      <div class="bus-card-actions">
+        <button class="book-ticket-card-btn" onclick="openBooking('${r.bus}', '${r.routeName}', '${r.fromStop}', '${r.toStop}')">
+          <i data-lucide="ticket"></i> Book Ticket
+        </button>
+      </div>
     `;
     container.appendChild(card);
   });
@@ -408,5 +413,149 @@ function setLang(lang) {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && document.activeElement !== fromInput && document.activeElement !== toInput) {
     searchBuses();
+  }
+});
+
+// ===== FIREBASE AUTH & BOOKING =====
+let currentUser = null;
+const loginHeaderBtn = document.getElementById('login-header-btn');
+const loginText = document.getElementById('login-text');
+const userAvatar = document.getElementById('user-avatar');
+const userIconDefault = document.getElementById('user-icon-default');
+
+const authOverlay = document.getElementById('auth-overlay');
+const authModal = document.getElementById('auth-modal');
+const googleLoginBtn = document.getElementById('google-login-btn');
+const closeAuth = document.getElementById('close-auth');
+
+const bookingOverlay = document.getElementById('booking-overlay');
+const bookingModal = document.getElementById('booking-modal');
+const closeBooking = document.getElementById('close-booking');
+const bookingDetails = document.getElementById('booking-details');
+const confirmBookBtn = document.getElementById('confirm-book-btn');
+const passengerNum = document.getElementById('passenger-num');
+const incPassenger = document.getElementById('inc-passenger');
+const decPassenger = document.getElementById('dec-passenger');
+
+let currentBookingData = null;
+let currentPassengers = 1;
+
+// Auth State Listener
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    currentUser = user;
+    loginText.textContent = user.displayName.split(' ')[0];
+    userAvatar.style.backgroundImage = `url(${user.photoURL})`;
+    userAvatar.style.display = 'block';
+    userIconDefault.style.display = 'none';
+    if(authModal.classList.contains('show')) closeAuthModal();
+  } else {
+    currentUser = null;
+    loginText.textContent = 'Login';
+    userAvatar.style.display = 'none';
+    userIconDefault.style.display = 'block';
+  }
+});
+
+// Login Button Click
+loginHeaderBtn.addEventListener('click', () => {
+  if (currentUser) {
+    if(confirm("Do you want to logout?")) {
+      auth.signOut();
+    }
+  } else {
+    openAuthModal();
+  }
+});
+
+function openAuthModal() {
+  authOverlay.classList.add('show');
+  authModal.classList.add('show');
+}
+function closeAuthModal() {
+  authOverlay.classList.remove('show');
+  authModal.classList.remove('show');
+}
+closeAuth.addEventListener('click', closeAuthModal);
+authOverlay.addEventListener('click', closeAuthModal);
+
+googleLoginBtn.addEventListener('click', () => {
+  const btnText = document.getElementById('google-btn-text');
+  const ogText = btnText.textContent;
+  btnText.textContent = 'Signing in...';
+  auth.signInWithPopup(googleProvider).catch((error) => {
+    alert("Login failed: " + error.message);
+    btnText.textContent = ogText;
+  });
+});
+
+// Booking Modal Logic
+window.openBooking = function(busNum, routeName, fromStop, toStop) {
+  if (!currentUser) {
+    openAuthModal();
+    return;
+  }
+  currentBookingData = { busNum, routeName, fromStop, toStop };
+  currentPassengers = 1;
+  passengerNum.textContent = currentPassengers;
+  
+  bookingDetails.innerHTML = `
+    <div class="route-name">Bus ${busNum} - ${routeName}</div>
+    <div class="stops">
+      <i data-lucide="map-pin"></i> ${fromStop} <i data-lucide="arrow-right"></i> ${toStop}
+    </div>
+  `;
+  lucide.createIcons({ root: bookingDetails });
+  
+  bookingOverlay.classList.add('show');
+  bookingModal.classList.add('show');
+};
+
+function closeBookingModal() {
+  bookingOverlay.classList.remove('show');
+  bookingModal.classList.remove('show');
+}
+closeBooking.addEventListener('click', closeBookingModal);
+bookingOverlay.addEventListener('click', closeBookingModal);
+
+incPassenger.addEventListener('click', () => {
+  if(currentPassengers < 10) {
+    currentPassengers++;
+    passengerNum.textContent = currentPassengers;
+  }
+});
+decPassenger.addEventListener('click', () => {
+  if(currentPassengers > 1) {
+    currentPassengers--;
+    passengerNum.textContent = currentPassengers;
+  }
+});
+
+confirmBookBtn.addEventListener('click', async () => {
+  if(!currentUser || !currentBookingData) return;
+  const ogText = confirmBookBtn.textContent;
+  confirmBookBtn.textContent = 'Booking...';
+  confirmBookBtn.disabled = true;
+
+  try {
+    await db.collection('bookings').add({
+      userId: currentUser.uid,
+      userName: currentUser.displayName,
+      userEmail: currentUser.email,
+      busNum: currentBookingData.busNum,
+      routeName: currentBookingData.routeName,
+      fromStop: currentBookingData.fromStop,
+      toStop: currentBookingData.toStop,
+      passengers: currentPassengers,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    alert("Ticket Booked Successfully!");
+    closeBookingModal();
+  } catch(e) {
+    alert("Failed to book: " + e.message);
+  } finally {
+    confirmBookBtn.textContent = ogText;
+    confirmBookBtn.disabled = false;
   }
 });
