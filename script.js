@@ -11,6 +11,30 @@ let toSelected = '';
 let activeList = null;
 let activeIndex = -1;
 
+// ===== MAP STATE =====
+let map = null;
+let userMarker = null;
+let stopMarkers = [];
+let routePolyline = null;
+let UNIQUE_STOPS_WITH_COORD = [];
+
+function updateUniqueStops() {
+  const stopMap = new Map();
+  BUS_DATA.forEach(route => {
+    route.stops.forEach(stop => {
+      if (stop.lat && stop.lng && !stopMap.has(stop.name)) {
+        stopMap.set(stop.name, {
+          name: stop.name,
+          name_mr: stop.name_mr,
+          lat: stop.lat,
+          lng: stop.lng
+        });
+      }
+    });
+  });
+  UNIQUE_STOPS_WITH_COORD = Array.from(stopMap.values());
+}
+
 // ===== INITIALIZE =====
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize icons
@@ -22,7 +46,155 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Set default language
   setLang('en');
+
+  // Initialize Map
+  updateUniqueStops();
+  initMap();
 });
+
+function initMap() {
+  // Alandi coordinates as default center
+  const alandi = [18.6751, 73.8890];
+  map = L.map('map', {
+    zoomControl: true,
+    attributionControl: false
+  }).setView(alandi, 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+  }).addTo(map);
+
+  // Locate me button
+  document.getElementById('locate-me-btn').addEventListener('click', locateMe);
+
+  // Map click to select stops
+  map.on('click', onMapClick);
+}
+
+function locateMe() {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser");
+    return;
+  }
+
+  const btn = document.getElementById('locate-me-btn');
+  btn.style.opacity = '0.5';
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      btn.style.opacity = '1';
+      const { latitude, longitude } = position.coords;
+      const userPos = [latitude, longitude];
+      
+      if (userMarker) userMarker.remove();
+      userMarker = L.marker(userPos, {
+        icon: L.divIcon({
+          className: 'user-location-icon',
+          html: '<div class="pulse-dot"></div>',
+          iconSize: [20, 20]
+        })
+      }).addTo(map);
+
+      map.setView(userPos, 15);
+      
+      const nearest = findNearestStop(latitude, longitude);
+      if (nearest) {
+        setStopFromMap(nearest, 'from');
+      }
+    },
+    (error) => {
+      btn.style.opacity = '1';
+      alert("Unable to retrieve your location");
+    }
+  );
+}
+
+function findNearestStop(lat, lng) {
+  let minMarker = null;
+  let minDist = Infinity;
+
+  UNIQUE_STOPS_WITH_COORD.forEach(stop => {
+    const dist = Math.sqrt(Math.pow(stop.lat - lat, 2) + Math.pow(stop.lng - lng, 2));
+    if (dist < minDist) {
+      minDist = dist;
+      minMarker = stop;
+    }
+  });
+
+  return minMarker;
+}
+
+function onMapClick(e) {
+  const { lat, lng } = e.latlng;
+  const nearest = findNearestStop(lat, lng);
+  if (nearest) {
+    // If from is already selected, set as to. Otherwise set as from.
+    if (fromSelected && !toSelected) {
+      setStopFromMap(nearest, 'to');
+    } else {
+      setStopFromMap(nearest, 'from');
+    }
+  }
+}
+
+function setStopFromMap(stop, type) {
+  const name = currentLang === 'mr' && stop.name_mr ? stop.name_mr : stop.name;
+  const inputId = type === 'from' ? 'from-input' : 'to-input';
+  const inputEl = document.getElementById(inputId);
+  
+  inputEl.value = name;
+  if (type === 'from') fromSelected = name;
+  else toSelected = name;
+
+  // Visual feedback on map
+  L.popup()
+    .setLatLng([stop.lat, stop.lng])
+    .setContent(`<b>${type === 'from' ? 'Pickup' : 'Dropoff'}:</b> ${name}`)
+    .openOn(map);
+
+  // Trigger search if both are selected
+  if (fromSelected && toSelected) {
+    searchBuses();
+  }
+}
+
+function clearMapRoute() {
+  if (routePolyline) routePolyline.remove();
+  stopMarkers.forEach(m => m.remove());
+  stopMarkers = [];
+}
+
+function drawRouteOnMap(stops) {
+  clearMapRoute();
+  const latlngs = stops.filter(s => s.lat && s.lng).map(s => [s.lat, s.lng]);
+  if (latlngs.length < 2) return;
+
+  routePolyline = L.polyline(latlngs, {
+    color: 'var(--accent)',
+    weight: 4,
+    opacity: 0.8,
+    lineJoin: 'round'
+  }).addTo(map);
+
+  // Add small dots for intermediate stops
+  latlngs.forEach((ll, i) => {
+    const isFirst = i === 0;
+    const isLast = i === latlngs.length - 1;
+    
+    const marker = L.circleMarker(ll, {
+      radius: isFirst || isLast ? 6 : 3,
+      fillColor: isFirst ? 'var(--text)' : isLast ? 'var(--accent)' : 'var(--border)',
+      color: 'var(--bg)',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 1
+    }).addTo(map);
+    
+    stopMarkers.push(marker);
+  });
+
+  map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+}
 
 // ===== SETTINGS & THEME =====
 const settingsBtn = document.getElementById('settings-btn');
@@ -316,6 +488,9 @@ window.openBusDetail = function(index) {
 
   detailOverlay.classList.add('show');
   detailModal.classList.add('show');
+
+  // Draw on map
+  drawRouteOnMap(r.allStops);
 };
 
 function closeBusDetailModal() {

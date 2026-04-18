@@ -61,11 +61,21 @@ for r in range(1, main_sheet.nrows):
             'stops': []
         }
     
-    routes[route_id]['stops'].append({
+    # Parse lat/long from columns 6 and 7
+    lat = main_sheet.cell_value(r, 6)
+    lng = main_sheet.cell_value(r, 7)
+    stop_entry = {
         'order': stop_seq,
         'name': stop_name,
         'name_mr': stop_name_mr
-    })
+    }
+    if lat and lng:
+        try:
+            stop_entry['lat'] = round(float(lat), 6)
+            stop_entry['lng'] = round(float(lng), 6)
+        except (ValueError, TypeError):
+            pass
+    routes[route_id]['stops'].append(stop_entry)
 
 # Sort stops by order within each route
 for route_id in routes:

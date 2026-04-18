@@ -191,6 +191,98 @@ header {
   }
 }
 
+/* MAP SECTION */
+.map-section {
+  flex: 1.5;
+  height: 400px;
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 40px var(--shadow);
+  z-index: 10;
+}
+#map {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.map-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+#locate-me-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: all 0.2s;
+}
+#locate-me-btn:hover {
+  background: var(--surface-hover);
+  transform: translateY(-2px);
+}
+#locate-me-btn i {
+  width: 20px;
+  height: 20px;
+}
+
+/* Custom Leaflet Dark Theme */
+.leaflet-container {
+  background: var(--bg) !important;
+}
+.leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) !important;
+}
+[data-theme="light"] .leaflet-tile {
+  filter: none !important;
+}
+.leaflet-bar {
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 12px var(--shadow) !important;
+}
+.leaflet-bar a {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.leaflet-bar a:hover {
+  background: var(--surface-hover) !important;
+}
+
+/* User Location Marker */
+.user-location-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pulse-dot {
+  width: 12px;
+  height: 12px;
+  background: #3b82f6;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  animation: pulse-blue 2s infinite;
+}
+@keyframes pulse-blue {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
 .hero-tag {
   display: inline-flex;
   align-items: center;
