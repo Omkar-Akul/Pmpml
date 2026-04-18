@@ -71,6 +71,11 @@ function initMap() {
   map.on('click', onMapClick);
 }
 
+// Handle window resize for map
+window.addEventListener('resize', () => {
+  if (map) map.invalidateSize();
+});
+
 function locateMe() {
   if (!navigator.geolocation) {
     alert("Geolocation is not supported by your browser");
@@ -128,11 +133,21 @@ function onMapClick(e) {
   const { lat, lng } = e.latlng;
   const nearest = findNearestStop(lat, lng);
   if (nearest) {
-    // If from is already selected, set as to. Otherwise set as from.
-    if (fromSelected && !toSelected) {
+    const fromVal = document.getElementById('from-input').value.trim();
+    const toVal = document.getElementById('to-input').value.trim();
+
+    // If pickup is filled but dropoff is empty, set dropoff
+    if (fromVal && !toVal) {
       setStopFromMap(nearest, 'to');
-    } else {
+    } 
+    // If both are filled, or both are empty, or just dropoff is filled (rare), set pickup
+    else {
       setStopFromMap(nearest, 'from');
+      // If we are resetting pickup, clear dropoff too for a fresh search
+      if (toVal) {
+        document.getElementById('to-input').value = '';
+        toSelected = '';
+      }
     }
   }
 }
