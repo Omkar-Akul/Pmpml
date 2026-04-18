@@ -132,6 +132,8 @@ const toInput = document.getElementById('to-input');
 setupInput(fromInput, 'from-list', (v) => { fromSelected = v; });
 setupInput(toInput, 'to-list', (v) => { toSelected = v; });
 
+let currentResults = [];
+
 // ===== SEARCH =====
 function searchBuses() {
   const from = fromSelected || fromInput.value.trim();
@@ -145,7 +147,7 @@ function searchBuses() {
   const fromLower = from.toLowerCase();
   const toLower = to.toLowerCase();
 
-  const results = [];
+  currentResults = [];
 
   BUS_DATA.forEach(route => {
     const stops = route.stops;
@@ -164,21 +166,23 @@ function searchBuses() {
     const ti = toIdx !== -1 ? toIdx : toIdxPartial;
 
     if (fi !== -1 && ti !== -1 && fi < ti) {
-      results.push({
+      currentResults.push({
         bus: route.bus,
         routeName: getRouteName(route),
         direction: route.direction,
         fromStop: getName(stops[fi]),
         fromOrder: stops[fi].order,
+        fromIdx: fi,
         toStop: getName(stops[ti]),
         toOrder: stops[ti].order,
+        toIdx: ti,
         stopsBetween: ti - fi - 1,
         allStops: stops
       });
     }
   });
 
-  displayResults(results, from, to);
+  displayResults(currentResults, from, to);
 }
 
 function displayResults(results, from, to) {
@@ -216,6 +220,7 @@ function displayResults(results, from, to) {
     const card = document.createElement('div');
     card.className = 'bus-card';
     card.style.animationDelay = (i * 0.07) + 's';
+    card.onclick = () => openBusDetail(i);
 
     const dirClass = r.direction === 'OUT' ? 'dir-out' : 'dir-in';
     const tl = LANG[currentLang]; 
@@ -256,7 +261,7 @@ function displayResults(results, from, to) {
         </div>
       </div>
       <div class="bus-card-actions">
-        <button class="book-ticket-card-btn" onclick="openBooking('${r.bus}', '${r.routeName}', '${r.fromStop}', '${r.toStop}')">
+        <button class="book-ticket-card-btn" onclick="event.stopPropagation(); openBooking('${r.bus}', '${r.routeName}', '${r.fromStop}', '${r.toStop}')">
           <i data-lucide="ticket"></i> Book Ticket
         </button>
       </div>
@@ -267,6 +272,58 @@ function displayResults(results, from, to) {
   lucide.createIcons({ root: container });
 }
 
+
+// ===== BUS DETAIL MODAL =====
+const detailOverlay = document.getElementById('detail-overlay');
+const detailModal = document.getElementById('detail-modal');
+const closeDetail = document.getElementById('close-detail');
+
+window.openBusDetail = function(index) {
+  const r = currentResults[index];
+  if (!r) return;
+
+  document.getElementById('detail-bus-badge').textContent = r.bus;
+  document.getElementById('detail-bus-name').textContent = r.routeName;
+  
+  const estimatedTime = (r.stopsBetween + 1) * 2;
+  const estimatedFare = (r.stopsBetween + 1) * 1;
+
+  document.getElementById('detail-time').textContent = estimatedTime + (currentLang === 'mr' ? ' मि' : ' min');
+  document.getElementById('detail-fare').textContent = '₹' + estimatedFare;
+  document.getElementById('detail-stops-count').textContent = r.allStops.length;
+
+  const timeline = document.getElementById('detail-timeline');
+  timeline.innerHTML = '';
+  
+  const getName = (s) => (currentLang === 'mr' && s.name_mr) ? s.name_mr : s.name;
+  
+  r.allStops.forEach((stop, idx) => {
+    let classes = 'timeline-item';
+    if (idx === r.fromIdx) classes += ' start';
+    else if (idx === r.toIdx) classes += ' end';
+    else if (idx > r.fromIdx && idx < r.toIdx) classes += ' highlight';
+
+    const div = document.createElement('div');
+    div.className = classes;
+    div.innerHTML = `
+      <div class="timeline-dot"></div>
+      <div class="timeline-content">
+        <div class="timeline-stop">${getName(stop)}</div>
+      </div>
+    `;
+    timeline.appendChild(div);
+  });
+
+  detailOverlay.classList.add('show');
+  detailModal.classList.add('show');
+};
+
+function closeBusDetailModal() {
+  detailOverlay.classList.remove('show');
+  detailModal.classList.remove('show');
+}
+closeDetail.addEventListener('click', closeBusDetailModal);
+detailOverlay.addEventListener('click', closeBusDetailModal);
 
 // ===== TRANSLATIONS =====
 const LANG = {
@@ -304,7 +361,11 @@ const LANG = {
     settingTheme: 'Theme',
     settingLang: 'Language',
     themeLight: 'Light',
-    themeDark: 'Dark'
+    themeDark: 'Dark',
+    estTime: 'Est. Time',
+    estFare: 'Est. Fare',
+    totalStops: 'Stops',
+    journeyTimeline: 'Journey Timeline'
   },
   mr: {
     pageTitle: 'अलंदी बस शोधक – पुणे PMPML',
@@ -340,7 +401,11 @@ const LANG = {
     settingTheme: 'थीम',
     settingLang: 'भाषा',
     themeLight: 'लाईट',
-    themeDark: 'डार्क'
+    themeDark: 'डार्क',
+    estTime: 'अंदाजित वेळ',
+    estFare: 'अंदाजित भाडे',
+    totalStops: 'थांबे',
+    journeyTimeline: 'प्रवासाची वेळरेषा'
   }
 };
 
@@ -392,6 +457,12 @@ function setLang(lang) {
   document.getElementById('setting-lang').textContent = t.settingLang;
   document.getElementById('theme-light').textContent = t.themeLight;
   document.getElementById('theme-dark').textContent = t.themeDark;
+
+  // Detail Modal Translations
+  document.getElementById('label-time').textContent = t.estTime;
+  document.getElementById('label-fare').textContent = t.estFare;
+  document.getElementById('label-stops').textContent = t.totalStops;
+  document.getElementById('label-journey').textContent = t.journeyTimeline;
 
   // Results title if visible
   const resultsSection = document.getElementById('results-section');

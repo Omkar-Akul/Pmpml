@@ -903,6 +903,198 @@ footer {
 }
 .book-ticket-card-btn i { width: 16px; height: 16px; }
 
+/* DETAIL MODAL */
+.detail-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -45%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 85vh;
+  z-index: 201;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+  box-shadow: 0 20px 60px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.detail-modal.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+.detail-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+}
+.detail-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.detail-bus-badge {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent-text);
+  background: var(--accent);
+  padding: 8px 16px;
+  border-radius: 10px;
+  min-width: 64px;
+  text-align: center;
+  letter-spacing: -0.5px;
+}
+.detail-bus-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.detail-content {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.detail-content::-webkit-scrollbar { width: 4px; }
+.detail-content::-webkit-scrollbar-track { background: transparent; }
+.detail-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* QUICK INFO GRID */
+.quick-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.info-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.info-card i {
+  width: 24px;
+  height: 24px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.info-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* JOURNEY TIMELINE */
+.timeline-container {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+.timeline-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+.timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 12px;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 8px; bottom: 8px;
+  left: 17px;
+  width: 2px;
+  background: var(--border);
+  z-index: 1;
+}
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  position: relative;
+  z-index: 2;
+  padding-bottom: 24px;
+}
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  background: var(--bg);
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.timeline-item.highlight .timeline-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(234, 179, 8, 0.2);
+}
+.timeline-item.start .timeline-dot, .timeline-item.end .timeline-dot {
+  width: 16px;
+  height: 16px;
+  border-width: 4px;
+  border-color: var(--text);
+  background: var(--bg);
+  margin-top: 2px;
+  margin-left: -2px;
+}
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+}
+.timeline-stop {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.timeline-item.highlight .timeline-stop,
+.timeline-item.start .timeline-stop,
+.timeline-item.end .timeline-stop {
+  color: var(--text);
+  font-weight: 600;
+}
+.timeline-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* BUS CARD HOVER FIX */
+.bus-card {
+  cursor: pointer;
+}
+.bus-card-actions {
+  cursor: default;
+}
+
 /* MOBILE */
 @media (max-width: 600px) {
   header { padding: 20px 20px 0; }

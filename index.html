@@ -145,6 +145,44 @@
   </div>
 </div>
 
+<!-- Bus Detail Modal -->
+<div class="modal-overlay" id="detail-overlay"></div>
+<div class="detail-modal" id="detail-modal">
+  <div class="detail-header">
+    <div class="detail-header-left">
+      <div class="detail-bus-badge" id="detail-bus-badge">--</div>
+      <div class="detail-bus-name" id="detail-bus-name">--</div>
+    </div>
+    <button class="close-modal" id="close-detail"><i data-lucide="x"></i></button>
+  </div>
+  <div class="detail-content">
+    <div class="quick-info-grid">
+      <div class="info-card">
+        <i data-lucide="clock"></i>
+        <div class="info-label" id="label-time">Est. Time</div>
+        <div class="info-value" id="detail-time">-- min</div>
+      </div>
+      <div class="info-card">
+        <i data-lucide="indian-rupee"></i>
+        <div class="info-label" id="label-fare">Est. Fare</div>
+        <div class="info-value" id="detail-fare">₹--</div>
+      </div>
+      <div class="info-card">
+        <i data-lucide="map"></i>
+        <div class="info-label" id="label-stops">Stops</div>
+        <div class="info-value" id="detail-stops-count">--</div>
+      </div>
+    </div>
+    
+    <div class="timeline-container">
+      <div class="timeline-title" id="label-journey">Journey Timeline</div>
+      <div class="timeline" id="detail-timeline">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Settings Button (Bottom Left) -->
 <button class="settings-btn" id="settings-btn" aria-label="Settings">
   <i data-lucide="settings"></i>
