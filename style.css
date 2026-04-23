@@ -61,31 +61,54 @@ body::before {
 header {
   position: relative;
   z-index: 10;
-  padding: 24px 32px 0;
+  padding: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+  flex-shrink: 1;
+  min-width: 0;
 }
-.map-dashboard-btn {
+.map-dashboard-btn, .login-header-btn {
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 6px 14px;
+  padding: 8px 12px;
   border-radius: 20px;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+.map-dashboard-btn span, .login-header-btn span {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+}
+
+@media (max-width: 400px) {
+    .map-dashboard-btn span, .login-header-btn span {
+        display: none;
+    }
+    .map-dashboard-btn, .login-header-btn {
+        padding: 8px;
+        border-radius: 50%;
+    }
+}
+
 .map-dashboard-btn:hover {
   background: var(--surface-hover);
   border-color: var(--text);
@@ -93,6 +116,7 @@ header {
 .map-dashboard-btn i {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
 }
 #map-dashboard {
   position: relative;
