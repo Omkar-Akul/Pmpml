@@ -28,6 +28,10 @@
     </div>
   </div>
   <div class="header-actions">
+    <button class="map-dashboard-btn" id="map-dashboard-btn">
+      <i data-lucide="map"></i>
+      <span>Map Dashboard</span>
+    </button>
     <div class="badge"><div class="live-dot"></div> <span id="badge-text">Live</span></div>
     <button class="login-header-btn" id="login-header-btn">
       <div class="user-avatar" id="user-avatar" style="display:none;"></div>
@@ -37,83 +41,92 @@
   </div>
 </header>
 
-<div class="hero-container">
-  <section class="hero">
-    <div class="hero-tag"><i data-lucide="sparkles" class="inline-icon"></i> <span id="hero-tag-text">Smart Route Search</span></div>
-    <h2 id="hero-title">Find your bus,<br><span>instantly.</span></h2>
-    <p id="hero-desc">Search any stop in Alandi's PMPML network and get direct bus routes.</p>
-  </section>
+<div id="map-dashboard" style="display: none;">
+  <div id="map-dashboard-map"></div>
+</div>
 
-  <div class="map-section">
-    <div id="map"></div>
-    <div class="map-controls">
-      <button id="locate-me-btn" title="Locate Me">
-        <i data-lucide="locate"></i>
+<div id="main-content">
+  <div class="hero-container">
+    <section class="hero">
+      <div class="hero-tag"><i data-lucide="sparkles" class="inline-icon"></i> <span id="hero-tag-text">Smart Route Search</span></div>
+      <h2 id="hero-title">Find your bus,<br><span>instantly.</span></h2>
+      <p id="hero-desc">Search any stop in Alandi's PMPML network and get direct bus routes.</p>
+    </section>
+
+    <div class="map-section">
+      <div id="map"></div>
+      <div class="map-controls">
+        <button id="locate-me-btn" title="Locate Me">
+          <i data-lucide="locate"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-image">
+      <img src="bus_image.png" alt="Premium Luxury Bus">
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num" id="stat-buses">23</div>
+      <div class="stat-label">Bus Routes</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-stops">616</div>
+      <div class="stat-label">Bus Stops</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="stat-routes">46</div>
+      <div class="stat-label">Directions</div>
+    </div>
+  </div>
+
+  <section class="search-section">
+    <div class="search-card">
+      <div class="search-card-header">
+        <div class="dot"></div>
+        <span id="card-header-text">Plan Your Journey</span>
+      </div>
+
+      <div class="field-group">
+        <div class="field">
+          <div class="field-label" id="from-label">Pickup Location</div>
+          <div class="field-icon from-icon"></div>
+          <input type="text" id="from-input" placeholder="Enter pickup stop..." autocomplete="off">
+          <button class="voice-btn" id="from-voice-btn" title="Use voice input"><i data-lucide="mic"></i></button>
+          <div class="autocomplete-list" id="from-list"></div>
+        </div>
+
+        <div class="connector"><div class="connector-line"></div></div>
+
+        <div class="field">
+          <div class="field-label" id="to-label">Dropoff Location</div>
+          <div class="field-icon to-icon"></div>
+          <input type="text" id="to-input" placeholder="Enter dropoff stop..." autocomplete="off">
+          <button class="voice-btn" id="to-voice-btn" title="Use voice input"><i data-lucide="mic"></i></button>
+          <div class="autocomplete-list" id="to-list"></div>
+        </div>
+      </div>
+
+      <button class="search-btn" onclick="searchBuses()">
+        <span id="search-btn-text">Find Buses</span> <i data-lucide="arrow-right"></i>
       </button>
     </div>
-  </div>
+  </section>
 
-  <div class="hero-image">
-    <img src="bus_image.png" alt="Premium Luxury Bus">
-  </div>
+  <section class="results-section" id="results-section">
+    <div class="results-header">
+      <div>
+        <div class="results-title" id="results-title">Available Rides</div>
+        <div class="route-summary" id="route-summary"></div>
+      </div>
+      <div class="results-count" id="results-count">0 found</div>
+    </div>
+    <div id="results-container"></div>
+  </section>
 </div>
 
-<div class="stats">
-  <div class="stat">
-    <div class="stat-num" id="stat-buses">23</div>
-    <div class="stat-label">Bus Routes</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num" id="stat-stops">616</div>
-    <div class="stat-label">Bus Stops</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num" id="stat-routes">46</div>
-    <div class="stat-label">Directions</div>
-  </div>
-</div>
-
-<section class="search-section">
-  <div class="search-card">
-    <div class="search-card-header">
-      <div class="dot"></div>
-      <span id="card-header-text">Plan Your Journey</span>
-    </div>
-
-    <div class="field-group">
-      <div class="field">
-        <div class="field-label" id="from-label">Pickup Location</div>
-        <div class="field-icon from-icon"></div>
-        <input type="text" id="from-input" placeholder="Enter pickup stop..." autocomplete="off">
-        <div class="autocomplete-list" id="from-list"></div>
-      </div>
-
-      <div class="connector"><div class="connector-line"></div></div>
-
-      <div class="field">
-        <div class="field-label" id="to-label">Dropoff Location</div>
-        <div class="field-icon to-icon"></div>
-        <input type="text" id="to-input" placeholder="Enter dropoff stop..." autocomplete="off">
-        <div class="autocomplete-list" id="to-list"></div>
-      </div>
-    </div>
-
-    <button class="search-btn" onclick="searchBuses()">
-      <span id="search-btn-text">Find Buses</span> <i data-lucide="arrow-right"></i>
-    </button>
-  </div>
-</section>
-
-<section class="results-section" id="results-section">
-  <div class="results-header">
-    <div>
-      <div class="results-title" id="results-title">Available Rides</div>
-      <div class="route-summary" id="route-summary"></div>
-    </div>
-    <div class="results-count" id="results-count">0 found</div>
-  </div>
-  <div id="results-container"></div>
-</section>
 
 <footer>
   <p id="footer-text">Alandi PMPML Bus Finder &nbsp;·&nbsp; Pune, Maharashtra &nbsp;·&nbsp; Data sourced from official route dataset</p>

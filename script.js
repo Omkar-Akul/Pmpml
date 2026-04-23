@@ -50,7 +50,168 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Map
   updateUniqueStops();
   initMap();
+
+  // Initialize Map Dashboard
+  initMapDashboard();
+
+  // Setup map dashboard button
+  document.getElementById('map-dashboard-btn').addEventListener('click', () => {
+    const mainContent = document.getElementById('main-content');
+    const mapDashboard = document.getElementById('map-dashboard');
+    const isHidden = mapDashboard.style.display === 'none';
+
+    if (isHidden) {
+      mainContent.style.display = 'none';
+      mapDashboard.style.display = 'block';
+      mapDashboardMap.invalidateSize(); // Refresh map size
+    } else {
+      mainContent.style.display = 'block';
+      mapDashboard.style.display = 'none';
+      map.invalidateSize(); // Refresh main map size
+    }
+  });
 });
+
+let mapDashboardMap = null;
+let busMarkers = {};
+
+function initMapDashboard() {
+  const alandi = [18.6751, 73.8890];
+  mapDashboardMap = L.map('map-dashboard-map', {
+    zoomControl: true,
+    attributionControl: false
+  }).setView(alandi, 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+  }).addTo(mapDashboardMap);
+
+  startBusSimulation();
+}
+
+function startBusSimulation() {
+    const AVG_SPEED_KMH = 30; // Average speed of a bus in km/h
+    const STOP_DWELL_TIME_MS = 20000; // 20 seconds
+    const UPDATE_INTERVAL_MS = 1000; // Update every second
+
+    // Simulate 20 buses, each with a random starting delay
+    const simulatedBuses = BUS_DATA.slice(0, 20).map((route, index) => {
+        const startDelay = Math.random() * 60000; // Random start delay up to 1 minute
+        return {
+            id: `BUS_${route.bus}_${index}`,
+            route: route,
+            currentStopIndex: 0,
+            status: 'stopped', // 'stopped' or 'en-route'
+            lastUpdateTime: Date.now() + startDelay,
+            timeToNextStop: 0,
+            timeAtCurrentStop: 0,
+        };
+    });
+
+    setInterval(() => {
+        const now = Date.now();
+        simulatedBuses.forEach(bus => {
+            if (now < bus.lastUpdateTime) return; // Skip if it's not time for this bus's life to start
+
+            const deltaTime = now - bus.lastUpdateTime;
+            bus.lastUpdateTime = now;
+
+            if (bus.status === 'stopped') {
+                bus.timeAtCurrentStop += deltaTime;
+                if (bus.timeAtCurrentStop >= STOP_DWELL_TIME_MS) {
+                    // Depart from stop
+                    bus.status = 'en-route';
+                    const nextStopIndex = (bus.currentStopIndex + 1) % bus.route.stops.length;
+                    const start = bus.route.stops[bus.currentStopIndex];
+                    const end = bus.route.stops[nextStopIndex];
+
+                    if (start.lat && start.lng && end.lat && end.lng) {
+                        const distance = getDistance(start.lat, start.lng, end.lat, end.lng);
+                        bus.timeToNextStop = (distance / (AVG_SPEED_KMH / 3600)) * 1000; // in ms
+                    } else {
+                        bus.timeToNextStop = 30000; // Default 30s if no coords
+                    }
+                }
+            }
+
+            if (bus.status === 'en-route') {
+                const startStop = bus.route.stops[bus.currentStopIndex];
+                const endStop = bus.route.stops[(bus.currentStopIndex + 1) % bus.route.stops.length];
+
+                if (bus.timeToNextStop > 0) {
+                    const initialTimeToNextStop = (getDistance(startStop.lat, startStop.lng, endStop.lat, endStop.lng) / (AVG_SPEED_KMH / 3600)) * 1000;
+                    const progress = 1 - (bus.timeToNextStop / initialTimeToNextStop);
+                    bus.timeToNextStop -= deltaTime;
+
+                    if (startStop.lat && startStop.lng && endStop.lat && endStop.lng) {
+                        const lat = startStop.lat + (endStop.lat - startStop.lat) * progress;
+                        const lng = startStop.lng + (endStop.lng - startStop.lng) * progress;
+                        const bearing = getBearing(startStop.lat, startStop.lng, endStop.lat, endStop.lng);
+                        updateBusLocation(bus.id, lat, lng, bus.route.bus, bearing);
+                    }
+
+                    if (bus.timeToNextStop <= 0) {
+                        // Arrived at next stop
+                        bus.status = 'stopped';
+                        bus.currentStopIndex = (bus.currentStopIndex + 1) % bus.route.stops.length;
+                        bus.timeAtCurrentStop = 0;
+                        // Snap to exact stop location
+                        if (endStop.lat && endStop.lng) {
+                             updateBusLocation(bus.id, endStop.lat, endStop.lng, bus.route.bus, getBearing(startStop.lat, startStop.lng, endStop.lat, endStop.lng));
+                        }
+                    }
+                } else {
+                     // Arrived (edge case)
+                    bus.status = 'stopped';
+                    bus.currentStopIndex = (bus.currentStopIndex + 1) % bus.route.stops.length;
+                    bus.timeAtCurrentStop = 0;
+                }
+            }
+        });
+    }, UPDATE_INTERVAL_MS);
+}
+
+// Helper function to calculate distance between two lat/lng points (Haversine formula)
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+}
+
+// Helper function to calculate bearing between two lat/lng points
+function getBearing(lat1, lon1, lat2, lon2) {
+    const y = Math.sin((lon2 - lon1) * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
+    const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+              Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos((lon2 - lon1) * Math.PI / 180);
+    return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+
+function updateBusLocation(busId, lat, lng, routeName, bearing) {
+  const busIcon = L.divIcon({
+    html: `<div class="bus-marker-icon" style="transform: rotate(${bearing}deg);"><i data-lucide="bus"></i></div><span class="bus-marker-label">${routeName}</span>`,
+    className: 'bus-live-marker',
+    iconSize: [60, 30],
+    iconAnchor: [30, 15],
+  });
+
+  if (busMarkers[busId]) {
+    busMarkers[busId].setLatLng([lat, lng]);
+    busMarkers[busId].setIcon(busIcon);
+  } else {
+    busMarkers[busId] = L.marker([lat, lng], { icon: busIcon })
+      .addTo(mapDashboardMap)
+      .bindPopup(`<b>Bus Route: ${routeName}</b><br>Live Location`);
+  }
+  lucide.createIcons();
+}
+
 
 function initMap() {
   // Alandi coordinates as default center
@@ -318,6 +479,63 @@ const toInput = document.getElementById('to-input');
 
 setupInput(fromInput, 'from-list', (v) => { fromSelected = v; });
 setupInput(toInput, 'to-list', (v) => { toSelected = v; });
+
+// ===== VOICE RECOGNITION =====
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    const fromVoiceBtn = document.getElementById('from-voice-btn');
+    const toVoiceBtn = document.getElementById('to-voice-btn');
+
+    let activeInput = null;
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        if (activeInput) {
+            activeInput.value = transcript;
+            activeInput.dispatchEvent(new Event('input')); // Trigger autocomplete
+        }
+    };
+
+    recognition.onerror = (event) => {
+        alert('Voice recognition error: ' + event.error);
+    };
+    
+    recognition.onend = () => {
+        fromVoiceBtn.classList.remove('active');
+        toVoiceBtn.classList.remove('active');
+        activeInput = null;
+    };
+
+    fromVoiceBtn.addEventListener('click', () => {
+        if (activeInput) recognition.stop();
+        activeInput = fromInput;
+        recognition.lang = currentLang === 'mr' ? 'mr-IN' : 'en-US';
+        fromVoiceBtn.classList.add('active');
+        recognition.start();
+    });
+
+    toVoiceBtn.addEventListener('click', () => {
+        if (activeInput) recognition.stop();
+        activeInput = toInput;
+        recognition.lang = currentLang === 'mr' ? 'mr-IN' : 'en-US';
+        toVoiceBtn.classList.add('active');
+        recognition.start();
+    });
+
+} else {
+    console.log('Speech Recognition not supported');
+    document.getElementById('from-voice-btn').style.display = 'none';
+    document.getElementById('to-voice-btn').style.display = 'none';
+}
+
 
 let currentResults = [];
 
