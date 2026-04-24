@@ -666,7 +666,7 @@ function displayResults(results, from, to) {
         </div>
       </div>
       <div class="bus-card-actions">
-        <button class="book-ticket-card-btn" onclick="event.stopPropagation(); openBooking('${r.bus}', '${r.routeName}', '${r.fromStop}', '${r.toStop}')">
+        <button class="book-ticket-card-btn" onclick="event.stopPropagation(); openBooking('${r.bus}', '${r.routeName}', '${r.fromStop}', '${r.toStop}', ${r.stopsBetween})">
           <i data-lucide="ticket"></i> Book Ticket
         </button>
       </div>
@@ -919,6 +919,11 @@ const decPassenger = document.getElementById('dec-passenger');
 let currentBookingData = null;
 let currentPassengers = 1;
 
+let currentWalletBalance = 0;
+let walletUnsubscribe = null;
+const walletBtn = document.getElementById('wallet-btn');
+const walletBalanceEl = document.getElementById('wallet-balance');
+
 // Auth State Listener
 auth.onAuthStateChanged((user) => {
   if (user) {
@@ -927,14 +932,50 @@ auth.onAuthStateChanged((user) => {
     userAvatar.style.backgroundImage = `url(${user.photoURL})`;
     userAvatar.style.display = 'block';
     userIconDefault.style.display = 'none';
+    if (walletBtn) walletBtn.style.display = 'flex';
+    const myTicketsBtn = document.getElementById('my-tickets-btn');
+    if (myTicketsBtn) myTicketsBtn.style.display = 'flex';
+    
+    walletUnsubscribe = db.collection('users').doc(user.uid).onSnapshot((doc) => {
+      if (doc.exists && doc.data().walletBalance !== undefined) {
+        currentWalletBalance = doc.data().walletBalance;
+      } else {
+        currentWalletBalance = 0;
+        db.collection('users').doc(user.uid).set({ walletBalance: 0 }, { merge: true });
+      }
+      if (walletBalanceEl) walletBalanceEl.textContent = '₹' + currentWalletBalance;
+    });
+
     if(authModal.classList.contains('show')) closeAuthModal();
   } else {
     currentUser = null;
     loginText.textContent = 'Login';
     userAvatar.style.display = 'none';
     userIconDefault.style.display = 'block';
+    if (walletBtn) walletBtn.style.display = 'none';
+    if (walletUnsubscribe) walletUnsubscribe();
+    const myTicketsBtn = document.getElementById('my-tickets-btn');
+    if (myTicketsBtn) myTicketsBtn.style.display = 'none';
   }
 });
+
+if (walletBtn) {
+  walletBtn.addEventListener('click', () => {
+    if(!currentUser) return;
+    const amtStr = prompt("Enter amount to recharge wallet:");
+    if(amtStr !== null) {
+      const amt = parseInt(amtStr);
+      if(amt > 0 && !isNaN(amt)) {
+        const newBal = currentWalletBalance + amt;
+        db.collection('users').doc(currentUser.uid).set({ walletBalance: newBal }, { merge: true })
+          .then(() => alert(`Successfully recharged ₹${amt}. New Balance: ₹${newBal}`))
+          .catch(e => alert("Recharge failed: " + e.message));
+      } else {
+        alert("Please enter a valid amount.");
+      }
+    }
+  });
+}
 
 // Login Button Click
 loginHeaderBtn.addEventListener('click', () => {
@@ -969,26 +1010,35 @@ googleLoginBtn.addEventListener('click', () => {
 });
 
 // Booking Modal Logic
-window.openBooking = function(busNum, routeName, fromStop, toStop) {
+window.openBooking = function(busNum, routeName, fromStop, toStop, stopsBetween) {
   if (!currentUser) {
     openAuthModal();
     return;
   }
-  currentBookingData = { busNum, routeName, fromStop, toStop };
+  const estimatedFarePerPerson = (stopsBetween !== undefined ? stopsBetween + 1 : 5) * 1;
+  currentBookingData = { busNum, routeName, fromStop, toStop, farePerPerson: estimatedFarePerPerson };
   currentPassengers = 1;
   passengerNum.textContent = currentPassengers;
   
-  bookingDetails.innerHTML = `
-    <div class="route-name">Bus ${busNum} - ${routeName}</div>
-    <div class="stops">
-      <i data-lucide="map-pin"></i> ${fromStop} <i data-lucide="arrow-right"></i> ${toStop}
-    </div>
-  `;
-  lucide.createIcons({ root: bookingDetails });
+  updateBookingDetails();
   
   bookingOverlay.classList.add('show');
   bookingModal.classList.add('show');
 };
+
+function updateBookingDetails() {
+  const totalFare = currentBookingData.farePerPerson * currentPassengers;
+  bookingDetails.innerHTML = `
+    <div class="route-name">Bus ${currentBookingData.busNum} - ${currentBookingData.routeName}</div>
+    <div class="stops">
+      <i data-lucide="map-pin"></i> ${currentBookingData.fromStop} <i data-lucide="arrow-right"></i> ${currentBookingData.toStop}
+    </div>
+    <div class="booking-fare" style="margin-top:12px; font-weight:600; font-size:15px; color:var(--green);">
+      Total Fare: ₹${totalFare}
+    </div>
+  `;
+  lucide.createIcons({ root: bookingDetails });
+}
 
 function closeBookingModal() {
   bookingOverlay.classList.remove('show');
@@ -1001,23 +1051,35 @@ incPassenger.addEventListener('click', () => {
   if(currentPassengers < 10) {
     currentPassengers++;
     passengerNum.textContent = currentPassengers;
+    updateBookingDetails();
   }
 });
 decPassenger.addEventListener('click', () => {
   if(currentPassengers > 1) {
     currentPassengers--;
     passengerNum.textContent = currentPassengers;
+    updateBookingDetails();
   }
 });
 
 confirmBookBtn.addEventListener('click', async () => {
   if(!currentUser || !currentBookingData) return;
+  
+  const totalFare = currentBookingData.farePerPerson * currentPassengers;
+  if (currentWalletBalance < totalFare) {
+    alert(`Insufficient Wallet Balance. You need ₹${totalFare} but have ₹${currentWalletBalance}. Please recharge.`);
+    return;
+  }
+
   const ogText = confirmBookBtn.textContent;
   confirmBookBtn.textContent = 'Booking...';
   confirmBookBtn.disabled = true;
 
   try {
-    await db.collection('bookings').add({
+    const newBal = currentWalletBalance - totalFare;
+    await db.collection('users').doc(currentUser.uid).set({ walletBalance: newBal }, { merge: true });
+
+    const bookingRef = await db.collection('bookings').add({
       userId: currentUser.uid,
       userName: currentUser.displayName,
       userEmail: currentUser.email,
@@ -1026,11 +1088,12 @@ confirmBookBtn.addEventListener('click', async () => {
       fromStop: currentBookingData.fromStop,
       toStop: currentBookingData.toStop,
       passengers: currentPassengers,
+      totalFare: totalFare,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
     
-    alert("Ticket Booked Successfully!");
     closeBookingModal();
+    openVirtualTicket(bookingRef.id, currentBookingData, currentPassengers, totalFare);
   } catch(e) {
     alert("Failed to book: " + e.message);
   } finally {
@@ -1038,3 +1101,144 @@ confirmBookBtn.addEventListener('click', async () => {
     confirmBookBtn.disabled = false;
   }
 });
+
+// ===== TICKET DASHBOARD =====
+const dashboardOverlay = document.getElementById('dashboard-overlay');
+const dashboardModal  = document.getElementById('dashboard-modal');
+const closeDashboard  = document.getElementById('close-dashboard');
+const myTicketsBtn    = document.getElementById('my-tickets-btn');
+
+function openDashboard() {
+  dashboardOverlay.classList.add('show');
+  dashboardModal.classList.add('show');
+  loadMyTickets();
+}
+function closeDashboardModal() {
+  dashboardOverlay.classList.remove('show');
+  dashboardModal.classList.remove('show');
+}
+if (myTicketsBtn) myTicketsBtn.addEventListener('click', openDashboard);
+if (closeDashboard) closeDashboard.addEventListener('click', closeDashboardModal);
+if (dashboardOverlay) dashboardOverlay.addEventListener('click', closeDashboardModal);
+
+async function loadMyTickets() {
+  const container = document.getElementById('ticket-list-container');
+  if (!container || !currentUser) return;
+
+  container.innerHTML = `
+    <div class="tickets-loading">
+      <i data-lucide="loader-2" class="spin-icon"></i>
+      <span>Loading your tickets...</span>
+    </div>`;
+  lucide.createIcons({ root: container });
+
+  try {
+    const snapshot = await db.collection('bookings')
+      .where('userId', '==', currentUser.uid)
+      .get();
+
+    // Sort newest first client-side — no Firestore index needed
+    const docs = [];
+    snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+    docs.sort((a, b) => {
+      const ta = a.timestamp ? a.timestamp.toMillis() : 0;
+      const tb = b.timestamp ? b.timestamp.toMillis() : 0;
+      return tb - ta;
+    });
+
+    container.innerHTML = '';
+
+    if (snapshot.empty) {
+      container.innerHTML = `
+        <div class="tickets-empty">
+          <i data-lucide="ticket-x"></i>
+          <span>No bookings yet. Book your first ride!</span>
+        </div>`;
+      lucide.createIcons({ root: container });
+      document.getElementById('stat-total').textContent = '0';
+      document.getElementById('stat-spent').textContent = '₹0';
+      document.getElementById('stat-passengers').textContent = '0';
+      return;
+    }
+
+    let totalSpent = 0, totalPassengers = 0;
+    const cards = [];
+
+    docs.forEach((d) => {
+      totalSpent += d.totalFare || 0;
+      totalPassengers += d.passengers || 1;
+      const ts = d.timestamp ? d.timestamp.toDate().toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : 'N/A';
+
+      cards.push(`
+        <div class="past-ticket-card">
+          <div class="ptc-top">
+            <div class="ptc-bus">
+              <div class="ptc-bus-num">Bus ${d.busNum || '--'}</div>
+              <div class="ptc-route">${d.routeName || '--'}</div>
+            </div>
+            <span class="ptc-badge">✓ Confirmed</span>
+          </div>
+          <div class="ptc-journey">
+            <div class="ptc-stop">
+              <span class="ptc-stop-label">From</span>
+              <span class="ptc-stop-name">${d.fromStop || '--'}</span>
+            </div>
+            <div class="ptc-arrow"><i data-lucide="arrow-right"></i></div>
+            <div class="ptc-stop right">
+              <span class="ptc-stop-label">To</span>
+              <span class="ptc-stop-name">${d.toStop || '--'}</span>
+            </div>
+          </div>
+          <div class="ptc-bottom">
+            <div class="ptc-meta">
+              <div class="ptc-meta-item"><i data-lucide="calendar"></i>${ts}</div>
+              <div class="ptc-meta-item"><i data-lucide="users"></i>${d.passengers || 1} Passenger${(d.passengers || 1) > 1 ? 's' : ''}</div>
+            </div>
+            <div class="ptc-fare">₹${d.totalFare || 0}</div>
+          </div>
+        </div>`);
+    });
+
+    container.innerHTML = cards.join('');
+    lucide.createIcons({ root: container });
+
+    document.getElementById('stat-total').textContent = docs.length;
+    document.getElementById('stat-spent').textContent = '₹' + totalSpent;
+    document.getElementById('stat-passengers').textContent = totalPassengers;
+
+  } catch (e) {
+    container.innerHTML = `
+      <div class="tickets-empty">
+        <i data-lucide="alert-circle"></i>
+        <span>Failed to load tickets. Check console for a Firestore index link.</span>
+      </div>`;
+    lucide.createIcons({ root: container });
+    console.error('Firestore error:', e);
+  }
+}
+
+// VIRTUAL TICKET
+const ticketOverlay = document.getElementById('ticket-overlay');
+const ticketModal = document.getElementById('ticket-modal');
+const closeTicketBtn = document.getElementById('close-ticket-btn');
+
+function openVirtualTicket(ticketId, data, passengers, fare) {
+  document.getElementById('t-bus-num').textContent = data.busNum;
+  document.getElementById('t-route-name').textContent = data.routeName;
+  document.getElementById('t-from').textContent = data.fromStop;
+  document.getElementById('t-to').textContent = data.toStop;
+  document.getElementById('t-date').textContent = new Date().toLocaleDateString();
+  document.getElementById('t-passengers').textContent = passengers;
+  document.getElementById('t-fare').textContent = '₹' + fare;
+  document.getElementById('t-id').textContent = '#' + ticketId.substring(0,8).toUpperCase();
+  
+  ticketOverlay.classList.add('show');
+  ticketModal.classList.add('show');
+}
+
+function closeVirtualTicket() {
+  ticketOverlay.classList.remove('show');
+  ticketModal.classList.remove('show');
+}
+if(closeTicketBtn) closeTicketBtn.addEventListener('click', closeVirtualTicket);
+if(ticketOverlay) ticketOverlay.addEventListener('click', closeVirtualTicket);
