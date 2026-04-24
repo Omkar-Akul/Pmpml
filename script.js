@@ -319,36 +319,57 @@ function clearMapRoute() {
   stopMarkers = [];
 }
 
-function drawRouteOnMap(stops) {
+async function drawRouteOnMap(stops, targetMap = map) {
   clearMapRoute();
-  const latlngs = stops.filter(s => s.lat && s.lng).map(s => [s.lat, s.lng]);
-  if (latlngs.length < 2) return;
+  const validStops = stops.filter(s => s.lat && s.lng);
+  if (validStops.length < 2) return;
+
+  const maxStops = 50;
+  const step = Math.ceil(validStops.length / maxStops);
+  const sampleStops = validStops.filter((_, i) => i % step === 0 || i === validStops.length - 1);
+  
+  const coordsStr = sampleStops.map(s => `${s.lng},${s.lat}`).join(';');
+  let latlngs = [];
+
+  try {
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`);
+    const data = await res.json();
+    if (data.routes && data.routes.length > 0) {
+      latlngs = data.routes[0].geometry.coordinates.map(c => [parseFloat(c[1]), parseFloat(c[0])]);
+    } else {
+      throw new Error('No route found');
+    }
+  } catch (err) {
+    console.warn("OSRM routing failed, falling back to straight lines", err);
+    latlngs = validStops.map(s => [parseFloat(s.lat), parseFloat(s.lng)]);
+  }
 
   routePolyline = L.polyline(latlngs, {
     color: 'var(--accent)',
     weight: 4,
     opacity: 0.8,
     lineJoin: 'round'
-  }).addTo(map);
+  }).addTo(targetMap);
 
-  // Add small dots for intermediate stops
-  latlngs.forEach((ll, i) => {
+  // Add small dots for actual stops
+  validStops.forEach((s, i) => {
     const isFirst = i === 0;
-    const isLast = i === latlngs.length - 1;
+    const isLast = i === validStops.length - 1;
     
-    const marker = L.circleMarker(ll, {
+    const marker = L.circleMarker([s.lat, s.lng], {
       radius: isFirst || isLast ? 6 : 3,
       fillColor: isFirst ? 'var(--text)' : isLast ? 'var(--accent)' : 'var(--border)',
       color: 'var(--bg)',
       weight: 2,
       opacity: 1,
       fillOpacity: 1
-    }).addTo(map);
+    }).addTo(targetMap);
     
     stopMarkers.push(marker);
   });
 
-  map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+  targetMap.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+  return latlngs;
 }
 
 // ===== SETTINGS & THEME =====
@@ -1350,3 +1371,301 @@ async function loadMyTickets() {
     console.error('Firestore error:', e);
   }
 }
+
+/* ===== AI DASHBOARD & SIMULATED LLM ===== */
+const aiDashboardBtn = document.getElementById('sidebar-ai-btn');
+const aiDashboard = document.getElementById('ai-dashboard');
+const closeAiDashboard = document.getElementById('close-ai-dashboard');
+const aiMapContainer = document.getElementById('ai-map');
+const aiInput = document.getElementById('ai-input');
+const aiSendBtn = document.getElementById('ai-send-btn');
+const aiChatHistory = document.getElementById('ai-chat-history');
+
+let aiMapInstance = null;
+
+function initAiMap() {
+  if (!aiMapInstance) {
+    aiMapInstance = L.map('ai-map', { zoomControl: false }).setView([18.6385, 73.8885], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(aiMapInstance);
+  }
+  setTimeout(() => {
+    if (aiMapInstance) aiMapInstance.invalidateSize();
+  }, 300);
+}
+
+function initAIDashboardUI() {
+  const aiDashboardBtn = document.getElementById('sidebar-ai-btn');
+  const aiDashboard = document.getElementById('ai-dashboard');
+  const closeAiDashboard = document.getElementById('close-ai-dashboard');
+  
+  if (aiDashboardBtn) {
+    aiDashboardBtn.addEventListener('click', () => {
+      aiDashboard.classList.add('show');
+      if(window.innerWidth <= 768) toggleSidebar();
+      initAiMap();
+      if (!fleetSim && aiMapInstance) {
+        fleetSim = new FleetSimulator(aiMapInstance, 60);
+        fleetSim.init();
+      }
+    });
+  }
+
+  if (closeAiDashboard) {
+    closeAiDashboard.addEventListener('click', () => {
+      aiDashboard.classList.remove('show');
+    });
+  }
+}
+initAIDashboardUI();
+
+function appendAiMessage(text, sender) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `ai-msg ${sender}`;
+  msgDiv.textContent = text;
+  aiChatHistory.appendChild(msgDiv);
+  aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+}
+
+// ===== FLEET SIMULATOR ENGINE =====
+class FleetSimulator {
+  constructor(mapInstance, maxBuses = 60) {
+    this.map = mapInstance;
+    this.buses = [];
+    this.maxBuses = maxBuses;
+    this.trackedBusId = null;
+    this.animFrame = null;
+    this.lastTime = 0;
+  }
+
+  init() {
+    // Pick random routes to populate the fleet
+    const shuffledRoutes = [...BUS_DATA].sort(() => 0.5 - Math.random());
+    const selectedRoutes = shuffledRoutes.slice(0, Math.min(this.maxBuses, BUS_DATA.length));
+
+    selectedRoutes.forEach((route, index) => {
+      const validStops = route.stops.filter(s => s.lat && s.lng);
+      if (validStops.length < 2) return;
+
+      // Start at a random progress along the route
+      const startIndex = Math.floor(Math.random() * (validStops.length - 1));
+      
+      const markerIcon = L.divIcon({
+        className: 'fleet-marker',
+        iconSize: [12, 12]
+      });
+
+      const marker = L.marker([validStops[startIndex].lat, validStops[startIndex].lng], { icon: markerIcon }).addTo(this.map);
+
+      this.buses.push({
+        id: route.route_name.split(' ')[0] + '-' + index,
+        routeId: route.route_name.split(' ')[0],
+        routeName: route.route_name,
+        stops: validStops,
+        currentIndex: startIndex,
+        progress: 0,
+        speed: 0.005 + (Math.random() * 0.005), // speed between 0.005 and 0.01 progress per frame
+        direction: 1, // 1 for forward, -1 for backward
+        marker: marker
+      });
+    });
+
+    this.start();
+  }
+
+  start() {
+    this.lastTime = performance.now();
+    const animate = (time) => {
+      const deltaTime = time - this.lastTime;
+      this.lastTime = time;
+      this.update(deltaTime);
+      this.animFrame = requestAnimationFrame(animate);
+    };
+    this.animFrame = requestAnimationFrame(animate);
+  }
+
+  stop() {
+    if (this.animFrame) cancelAnimationFrame(this.animFrame);
+  }
+
+  update(deltaTime) {
+    // Adjust speed based on delta time to keep movement consistent
+    const timeScale = deltaTime / 16.66; // 60fps baseline
+
+    this.buses.forEach(bus => {
+      bus.progress += (bus.speed * bus.direction) * timeScale;
+
+      if (bus.direction === 1 && bus.progress >= 1) {
+        bus.currentIndex++;
+        bus.progress = 0;
+        if (bus.currentIndex >= bus.stops.length - 1) {
+          bus.currentIndex = bus.stops.length - 1;
+          bus.direction = -1; // Turn around
+          bus.progress = 1;
+        }
+      } else if (bus.direction === -1 && bus.progress <= 0) {
+        bus.currentIndex--;
+        bus.progress = 1;
+        if (bus.currentIndex <= 0) {
+          bus.currentIndex = 0;
+          bus.direction = 1; // Turn around
+          bus.progress = 0;
+        }
+      }
+
+      // Linear interpolation between current stop and next stop
+      const currentStop = bus.stops[bus.currentIndex];
+      const nextStop = bus.direction === 1 
+        ? bus.stops[Math.min(bus.currentIndex + 1, bus.stops.length - 1)]
+        : bus.stops[Math.max(bus.currentIndex - 1, 0)];
+
+      // Progress is 0 to 1 when moving forward, 1 to 0 when moving backward
+      const p = bus.direction === 1 ? bus.progress : (1 - bus.progress);
+      
+      const lat1 = parseFloat(currentStop.lat);
+      const lng1 = parseFloat(currentStop.lng);
+      const lat2 = parseFloat(nextStop.lat);
+      const lng2 = parseFloat(nextStop.lng);
+
+      const lat = lat1 + (lat2 - lat1) * p;
+      const lng = lng1 + (lng2 - lng1) * p;
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+        bus.marker.setLatLng([lat, lng]);
+      }
+
+      // If this is the tracked bus, center the map occasionally
+      if (this.trackedBusId === bus.routeId) {
+        // We only pan if the user hasn't explicitly moved away, but for simplicity we pan continuously here
+        // this.map.panTo([lat, lng], { animate: true, duration: 0.2 });
+      }
+    });
+  }
+
+  trackBus(routeId) {
+    this.trackedBusId = routeId;
+    this.buses.forEach(b => {
+      if (b.routeId === routeId) {
+        const el = b.marker.getElement();
+        if(el) {
+          el.classList.add('highlighted');
+          el.innerHTML = `<div class="pulse" style="position:absolute;width:30px;height:30px;background:var(--accent);border-radius:50%;left:-10px;top:-10px;animation:radarPulse 1s infinite;z-index:-1;"></div>`;
+        }
+      } else {
+        const el = b.marker.getElement();
+        if(el) {
+          el.classList.remove('highlighted');
+          el.innerHTML = '';
+        }
+      }
+    });
+  }
+}
+
+let fleetSim = null;
+
+// Simulated LLM Engine
+async function processAiQuery(query) {
+  const lowerQuery = query.toLowerCase();
+  
+  if (lowerQuery.includes('show all') || lowerQuery.includes('all buses') || lowerQuery.includes('fleet')) {
+    appendAiMessage(`Initializing Global Fleet View. Showing ~60 active buses across Pune.`, 'bot');
+    if (routePolyline) {
+        routePolyline.remove();
+        routePolyline = null;
+    }
+    stopMarkers.forEach(m => m.remove());
+    stopMarkers = [];
+    aiMapInstance.setView([18.5204, 73.8567], 11); // Zoom out to see Pune
+    if (fleetSim) fleetSim.trackedBusId = null;
+    return;
+  }
+
+  let foundRoute = null;
+  for (const route of BUS_DATA) {
+    if (!route || !route.route_name) continue;
+    const routeNum = route.route_name.split(' ')[0].toLowerCase();
+    if (lowerQuery.includes(routeNum)) {
+      foundRoute = route;
+      break;
+    }
+  }
+
+  let foundStopRoutes = [];
+  if (!foundRoute) {
+    for (const stop of UNIQUE_STOPS_WITH_COORD) {
+      if (!stop || !stop.name) continue;
+      if (lowerQuery.includes(stop.name.toLowerCase())) {
+        foundStopRoutes = BUS_DATA.filter(r => r.stops.some(s => s.name === stop.name));
+        break;
+      }
+    }
+  }
+
+  if (foundRoute) {
+    appendAiMessage(`Target Acquired: Route ${foundRoute.route_name}. Calculating physical road path via OSRM and locking camera to active fleet unit.`, 'bot');
+    
+    if (fleetSim) {
+      const hasBus = fleetSim.buses.some(b => b.routeId === foundRoute.route_name.split(' ')[0]);
+      if (!hasBus) {
+         // Force spawn one
+         const validStops = foundRoute.stops.filter(s => s.lat && s.lng);
+         if (validStops.length >= 2) {
+           const markerIcon = L.divIcon({ className: 'fleet-marker', iconSize: [12, 12] });
+           const marker = L.marker([parseFloat(validStops[0].lat), parseFloat(validStops[0].lng)], { icon: markerIcon }).addTo(aiMapInstance);
+           fleetSim.buses.push({
+             id: foundRoute.route_name.split(' ')[0] + '-forced',
+             routeId: foundRoute.route_name.split(' ')[0],
+             routeName: foundRoute.route_name,
+             stops: validStops,
+             currentIndex: 0, progress: 0, speed: 0.01, direction: 1, marker: marker
+           });
+         }
+      }
+    }
+
+    try {
+      await drawRouteOnMap(foundRoute.stops, aiMapInstance);
+      if (fleetSim) fleetSim.trackBus(foundRoute.route_name.split(' ')[0]);
+    } catch (e) {
+      console.error("Map Drawing Error:", e);
+      appendAiMessage(`I found the route, but I encountered an error plotting it on the map.`, 'bot');
+    }
+
+  } else if (foundStopRoutes.length > 0) {
+    const routesStr = foundStopRoutes.map(r => r.route_name.split(' ')[0]).join(', ');
+    appendAiMessage(`I found fleet units heading there: ${routesStr}. Type a bus number to track.`, 'bot');
+  } else {
+    appendAiMessage(`Command not recognized. Try "Show all active buses" or "Track bus 159".`, 'bot');
+  }
+}
+
+// Initialize AI Listeners robustly
+function initAIChatListeners() {
+  const aiInputEl = document.getElementById('ai-input');
+  const aiSendBtnEl = document.getElementById('ai-send-btn');
+
+  if (aiSendBtnEl && aiInputEl) {
+    const handleSend = () => {
+      const val = aiInputEl.value.trim();
+      if (!val) return;
+      appendAiMessage(val, 'user');
+      aiInputEl.value = '';
+      
+      setTimeout(() => {
+        processAiQuery(val).catch(e => {
+           console.error("AI Query Error:", e);
+           appendAiMessage("I encountered an error plotting that route.", "bot");
+        });
+      }, 600);
+    };
+    
+    aiSendBtnEl.addEventListener('click', handleSend);
+    aiInputEl.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleSend();
+    });
+  }
+}
+initAIChatListeners();
+

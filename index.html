@@ -61,6 +61,14 @@
             </button>
         </div>
 
+        <!-- AI Section -->
+        <div class="sidebar-group">
+            <div class="sidebar-group-label" id="label-ai-section">Intelligence</div>
+            <div class="sidebar-item" id="sidebar-ai-btn">
+                <i data-lucide="bot"></i> <span id="label-ai-map">Live AI Map</span>
+            </div>
+        </div>
+
         <!-- Navigation Section -->
         <div class="sidebar-group" id="sidebar-nav-section" style="display: none;">
             <div class="sidebar-group-label">Navigation</div>
@@ -354,6 +362,25 @@
       <div class="timeline" id="detail-timeline">
         <!-- Injected dynamically -->
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI Map Dashboard (Full Screen) -->
+<div class="ai-dashboard" id="ai-dashboard">
+  <button class="close-modal ai-close" id="close-ai-dashboard"><i data-lucide="x"></i></button>
+  
+  <div class="ai-map-container" id="ai-map"></div>
+  
+  <div class="ai-chat-interface">
+    <div class="ai-chat-history" id="ai-chat-history">
+      <div class="ai-msg bot">
+        Hello! I'm your AlandiBus AI. Type a bus number (like '159') or ask a question.
+      </div>
+    </div>
+    <div class="ai-input-group">
+      <input type="text" id="ai-input" placeholder="Ask AI... (e.g., 'Track 159')" autocomplete="off">
+      <button id="ai-send-btn"><i data-lucide="send"></i></button>
     </div>
   </div>
 </div>
