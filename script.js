@@ -896,6 +896,12 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== FIREBASE AUTH & BOOKING =====
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
 let currentUser = null;
 const loginHeaderBtn = document.getElementById('login-header-btn');
 const loginText = document.getElementById('login-text');
