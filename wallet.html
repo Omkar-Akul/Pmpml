@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wallet - Alandi Bus</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="wallet.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <header>
+        <div class="logo-group">
+            <a href="index.html" class="logo-icon" aria-label="Home">
+                <i data-lucide="bus"></i>
+            </a>
+            <div class="logo-text">
+                <h1>My Wallet</h1>
+                <p>Alandi Bus</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="index.html" class="back-btn">
+                <i data-lucide="arrow-left"></i>
+                <span>Back to Home</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="wallet-page-main">
+        <div class="wallet-card">
+            <div class="wallet-content">
+                <div class="wallet-icon"><i data-lucide="wallet"></i></div>
+                <p id="wallet-desc">Your current balance</p>
+                <div class="balance-display" id="current-balance">--</div>
+                <div class="add-money-group">
+                    <input type="number" id="add-money-input" placeholder="Enter amount" value="100">
+                    <button class="add-money-btn" id="add-money-btn">
+                        <i data-lucide="plus-circle"></i>
+                        <span>Add Demo Money</span>
+                    </button>
+                </div>
+                <div id="auth-message" style="display: none;">
+                    <p>Please <a href="index.html">log in</a> to manage your wallet.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="firebase-config.js"></script>
+    <script src="wallet.js"></script>
+</body>
+</html>

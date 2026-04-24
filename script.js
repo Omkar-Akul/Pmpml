@@ -901,6 +901,7 @@ const loginHeaderBtn = document.getElementById('login-header-btn');
 const loginText = document.getElementById('login-text');
 const userAvatar = document.getElementById('user-avatar');
 const userIconDefault = document.getElementById('user-icon-default');
+const profileDropdown = document.getElementById('profile-dropdown');
 
 const authOverlay = document.getElementById('auth-overlay');
 const authModal = document.getElementById('auth-modal');
@@ -945,6 +946,10 @@ auth.onAuthStateChanged((user) => {
     userAvatar.style.display = 'block';
     userIconDefault.style.display = 'none';
     
+    // Update profile dropdown
+    document.getElementById('dropdown-username').textContent = user.displayName;
+    document.getElementById('dropdown-email').textContent = user.email;
+
     walletContainer.style.display = 'flex';
     setupWalletListener(user.uid);
 
@@ -954,6 +959,7 @@ auth.onAuthStateChanged((user) => {
     loginText.textContent = 'Login';
     userAvatar.style.display = 'none';
     userIconDefault.style.display = 'block';
+    profileDropdown.style.display = 'none';
     
     walletContainer.style.display = 'none';
     if (walletUnsubscribe) {
@@ -987,47 +993,44 @@ function setupWalletListener(userId) {
 function updateWalletDisplay() {
     const formattedBalance = `₹${userWalletBalance.toFixed(2)}`;
     walletBalance.textContent = formattedBalance;
-    currentBalance.textContent = formattedBalance;
+    if (currentBalance) {
+        currentBalance.textContent = formattedBalance;
+    }
 }
 
 function openWalletModal() {
     walletOverlay.classList.add('show');
     walletModal.classList.add('show');
 }
-
-function closeWalletModal() {
-    walletOverlay.classList.remove('show');
-    walletModal.classList.remove('show');
-}
-
-walletContainer.addEventListener('click', openWalletModal);
 closeWallet.addEventListener('click', closeWalletModal);
 walletOverlay.addEventListener('click', closeWalletModal);
 
-addMoneyBtn.addEventListener('click', () => {
-    if (!currentUser) return;
-    const amountToAdd = parseFloat(addMoneyInput.value);
-    if (isNaN(amountToAdd) || amountToAdd <= 0) {
-        alert("Please enter a valid amount.");
-        return;
-    }
-    
-    const userDocRef = db.collection('users').doc(currentUser.uid);
-    db.runTransaction(transaction => {
-      return transaction.get(userDocRef).then(doc => {
-        const newBalance = (doc.data().walletBalance || 0) + amountToAdd;
-        transaction.update(userDocRef, { walletBalance: newBalance });
-        return newBalance;
-      });
-    }).then(newBalance => {
-      console.log(`Transaction successful. New balance: ₹${newBalance}`);
-      addMoneyInput.value = '100';
-      closeWalletModal();
-    }).catch(error => {
-      console.error("Transaction failed: ", error);
-      alert("Failed to add money. Please try again.");
+if(addMoneyBtn) {
+    addMoneyBtn.addEventListener('click', () => {
+        if (!currentUser) return;
+        const amountToAdd = parseFloat(addMoneyInput.value);
+        if (isNaN(amountToAdd) || amountToAdd <= 0) {
+            alert("Please enter a valid amount.");
+            return;
+        }
+        
+        const userDocRef = db.collection('users').doc(currentUser.uid);
+        db.runTransaction(transaction => {
+          return transaction.get(userDocRef).then(doc => {
+            const newBalance = (doc.data().walletBalance || 0) + amountToAdd;
+            transaction.update(userDocRef, { walletBalance: newBalance });
+            return newBalance;
+          });
+        }).then(newBalance => {
+          console.log(`Transaction successful. New balance: ₹${newBalance}`);
+          addMoneyInput.value = '100';
+          closeWalletModal();
+        }).catch(error => {
+          console.error("Transaction failed: ", error);
+          alert("Failed to add money. Please try again.");
+        });
     });
-});
+}
 
 // Ticket Logic
 function showVirtualTicket(bookingData, passengers, totalFare) {
@@ -1050,12 +1053,24 @@ ticketOverlay.addEventListener('click', closeTicketModal);
 // Login Button Click
 loginHeaderBtn.addEventListener('click', () => {
   if (currentUser) {
-    if(confirm("Do you want to logout?")) {
-      auth.signOut();
-    }
+    // Toggle dropdown
+    profileDropdown.style.display = profileDropdown.style.display === 'block' ? 'none' : 'block';
   } else {
     openAuthModal();
   }
+});
+
+// Close dropdown if clicked outside
+document.addEventListener('click', (e) => {
+    if (currentUser && !loginHeaderBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+        profileDropdown.style.display = 'none';
+    }
+});
+
+// Logout button in dropdown
+document.getElementById('logout-btn').addEventListener('click', () => {
+    auth.signOut();
+    profileDropdown.style.display = 'none';
 });
 
 function openAuthModal() {
@@ -1130,7 +1145,8 @@ confirmBookBtn.addEventListener('click', () => {
 
     if (userWalletBalance < totalFare) {
         alert("Insufficient wallet balance. Please add money to your wallet.");
-        openWalletModal();
+        // Redirect to wallet page instead of opening modal
+        window.location.href = 'wallet.html';
         return;
     }
 
