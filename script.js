@@ -1067,10 +1067,16 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Logout button in dropdown
 document.getElementById('logout-btn').addEventListener('click', () => {
-    auth.signOut();
-    profileDropdown.style.display = 'none';
+    if(confirm("Do you want to logout?")) {
+      auth.signOut().then(() => {
+        // This will trigger the onAuthStateChanged listener
+        // which will handle the UI updates.
+        console.log('User signed out');
+      }).catch((error) => {
+        console.error('Sign out error', error);
+      });
+    }
 });
 
 function openAuthModal() {
