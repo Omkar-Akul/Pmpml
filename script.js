@@ -919,10 +919,22 @@ const decPassenger = document.getElementById('dec-passenger');
 let currentBookingData = null;
 let currentPassengers = 1;
 
-let currentWalletBalance = 0;
-let walletUnsubscribe = null;
-const walletBtn = document.getElementById('wallet-btn');
-const walletBalanceEl = document.getElementById('wallet-balance');
+// ===== Wallet & Ticket Elements =====
+const walletContainer = document.getElementById('wallet-container');
+const walletBalance = document.getElementById('wallet-balance');
+const walletOverlay = document.getElementById('wallet-overlay');
+const walletModal = document.getElementById('wallet-modal');
+const closeWallet = document.getElementById('close-wallet');
+const currentBalance = document.getElementById('current-balance');
+const addMoneyInput = document.getElementById('add-money-input');
+const addMoneyBtn = document.getElementById('add-money-btn');
+
+const ticketOverlay = document.getElementById('ticket-overlay');
+const ticketModal = document.getElementById('ticket-modal');
+const closeTicket = document.getElementById('close-ticket');
+
+let userWalletBalance = 0;
+let walletUnsubscribe = null; // To listen for wallet changes
 
 // Auth State Listener
 auth.onAuthStateChanged((user) => {
@@ -932,32 +944,108 @@ auth.onAuthStateChanged((user) => {
     userAvatar.style.backgroundImage = `url(${user.photoURL})`;
     userAvatar.style.display = 'block';
     userIconDefault.style.display = 'none';
+    
+    walletContainer.style.display = 'flex';
+    setupWalletListener(user.uid);
+
     if(authModal.classList.contains('show')) closeAuthModal();
   } else {
     currentUser = null;
     loginText.textContent = 'Login';
     userAvatar.style.display = 'none';
     userIconDefault.style.display = 'block';
+    
+    walletContainer.style.display = 'none';
+    if (walletUnsubscribe) {
+      walletUnsubscribe(); // Detach listener on logout
+      walletUnsubscribe = null;
+    }
   }
 });
 
-if (walletBtn) {
-  walletBtn.addEventListener('click', () => {
-    if(!currentUser) return;
-    const amtStr = prompt("Enter amount to recharge wallet:");
-    if(amtStr !== null) {
-      const amt = parseInt(amtStr);
-      if(amt > 0 && !isNaN(amt)) {
-        const newBal = currentWalletBalance + amt;
-        db.collection('users').doc(currentUser.uid).set({ walletBalance: newBal }, { merge: true })
-          .then(() => alert(`Successfully recharged ₹${amt}. New Balance: ₹${newBal}`))
-          .catch(e => alert("Recharge failed: " + e.message));
-      } else {
-        alert("Please enter a valid amount.");
-      }
+function setupWalletListener(userId) {
+  const userDocRef = db.collection('users').doc(userId);
+
+  walletUnsubscribe = userDocRef.onSnapshot(doc => {
+    if (doc.exists) {
+      userWalletBalance = doc.data().walletBalance || 0;
+    } else {
+      // Create user profile with initial balance if it doesn't exist
+      userWalletBalance = 100;
+      userDocRef.set({
+        displayName: currentUser.displayName,
+        email: currentUser.email,
+        walletBalance: userWalletBalance
+      });
     }
+    updateWalletDisplay();
+  }, err => {
+    console.error("Error listening to wallet changes:", err);
   });
 }
+
+function updateWalletDisplay() {
+    const formattedBalance = `₹${userWalletBalance.toFixed(2)}`;
+    walletBalance.textContent = formattedBalance;
+    currentBalance.textContent = formattedBalance;
+}
+
+function openWalletModal() {
+    walletOverlay.classList.add('show');
+    walletModal.classList.add('show');
+}
+
+function closeWalletModal() {
+    walletOverlay.classList.remove('show');
+    walletModal.classList.remove('show');
+}
+
+walletContainer.addEventListener('click', openWalletModal);
+closeWallet.addEventListener('click', closeWalletModal);
+walletOverlay.addEventListener('click', closeWalletModal);
+
+addMoneyBtn.addEventListener('click', () => {
+    if (!currentUser) return;
+    const amountToAdd = parseFloat(addMoneyInput.value);
+    if (isNaN(amountToAdd) || amountToAdd <= 0) {
+        alert("Please enter a valid amount.");
+        return;
+    }
+    
+    const userDocRef = db.collection('users').doc(currentUser.uid);
+    db.runTransaction(transaction => {
+      return transaction.get(userDocRef).then(doc => {
+        const newBalance = (doc.data().walletBalance || 0) + amountToAdd;
+        transaction.update(userDocRef, { walletBalance: newBalance });
+        return newBalance;
+      });
+    }).then(newBalance => {
+      console.log(`Transaction successful. New balance: ₹${newBalance}`);
+      addMoneyInput.value = '100';
+      closeWalletModal();
+    }).catch(error => {
+      console.error("Transaction failed: ", error);
+      alert("Failed to add money. Please try again.");
+    });
+});
+
+// Ticket Logic
+function showVirtualTicket(bookingData, passengers, totalFare) {
+    document.getElementById('ticket-route').textContent = `${bookingData.fromStop} → ${bookingData.toStop}`;
+    document.getElementById('ticket-bus-no').textContent = bookingData.busNum;
+    document.getElementById('ticket-passengers').textContent = passengers;
+    document.getElementById('ticket-fare').textContent = `₹${totalFare.toFixed(2)}`;
+
+    ticketOverlay.classList.add('show');
+    ticketModal.classList.add('show');
+}
+
+function closeTicketModal() {
+    ticketOverlay.classList.remove('show');
+    ticketModal.classList.remove('show');
+}
+closeTicket.addEventListener('click', closeTicketModal);
+ticketOverlay.addEventListener('click', closeTicketModal);
 
 // Login Button Click
 loginHeaderBtn.addEventListener('click', () => {
@@ -992,12 +1080,12 @@ googleLoginBtn.addEventListener('click', () => {
 });
 
 // Booking Modal Logic
-window.openBooking = function(busNum, routeName, fromStop, toStop) {
+window.openBooking = function(busNum, routeName, fromStop, toStop, stopsBetween) {
   if (!currentUser) {
     openAuthModal();
     return;
   }
-  currentBookingData = { busNum, routeName, fromStop, toStop };
+  currentBookingData = { busNum, routeName, fromStop, toStop, stopsBetween };
   currentPassengers = 1;
   passengerNum.textContent = currentPassengers;
   
@@ -1013,192 +1101,59 @@ window.openBooking = function(busNum, routeName, fromStop, toStop) {
   bookingModal.classList.add('show');
 };
 
-function closeWalletModal() {
-    walletOverlay.classList.remove('show');
-    walletModal.classList.remove('show');
+function closeBookingModal() {
+  bookingOverlay.classList.remove('show');
+  bookingModal.classList.remove('show');
 }
 closeBooking.addEventListener('click', closeBookingModal);
 bookingOverlay.addEventListener('click', closeBookingModal);
 
 incPassenger.addEventListener('click', () => {
-  if(currentPassengers < 10) {
+  if (currentPassengers < 10) {
     currentPassengers++;
     passengerNum.textContent = currentPassengers;
   }
 });
+
 decPassenger.addEventListener('click', () => {
-  if(currentPassengers > 1) {
+  if (currentPassengers > 1) {
     currentPassengers--;
     passengerNum.textContent = currentPassengers;
   }
 });
 
-confirmBookBtn.addEventListener('click', async () => {
-  if(!currentUser || !currentBookingData) return;
-  const ogText = confirmBookBtn.textContent;
-  confirmBookBtn.textContent = 'Booking...';
-  confirmBookBtn.disabled = true;
+confirmBookBtn.addEventListener('click', () => {
+    if (!currentBookingData || !currentUser) return;
 
-  try {
-    await db.collection('bookings').add({
-      userId: currentUser.uid,
-      userName: currentUser.displayName,
-      userEmail: currentUser.email,
-      busNum: currentBookingData.busNum,
-      routeName: currentBookingData.routeName,
-      fromStop: currentBookingData.fromStop,
-      toStop: currentBookingData.toStop,
-      passengers: currentPassengers,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    
-    alert("Ticket Booked Successfully!");
-    closeBookingModal();
-  } catch(e) {
-    alert("Failed to book: " + e.message);
-  } finally {
-    confirmBookBtn.textContent = ogText;
-    confirmBookBtn.disabled = false;
-  }
-});
+    const estimatedFarePerPerson = (currentBookingData.stopsBetween + 1) * 1;
+    const totalFare = estimatedFarePerPerson * currentPassengers;
 
-// ===== TICKET DASHBOARD =====
-const dashboardOverlay = document.getElementById('dashboard-overlay');
-const dashboardModal  = document.getElementById('dashboard-modal');
-const closeDashboard  = document.getElementById('close-dashboard');
-const myTicketsBtn    = document.getElementById('my-tickets-btn');
-
-function openDashboard() {
-  dashboardOverlay.classList.add('show');
-  dashboardModal.classList.add('show');
-  loadMyTickets();
-}
-function closeDashboardModal() {
-  dashboardOverlay.classList.remove('show');
-  dashboardModal.classList.remove('show');
-}
-if (myTicketsBtn) myTicketsBtn.addEventListener('click', openDashboard);
-if (closeDashboard) closeDashboard.addEventListener('click', closeDashboardModal);
-if (dashboardOverlay) dashboardOverlay.addEventListener('click', closeDashboardModal);
-
-async function loadMyTickets() {
-  const container = document.getElementById('ticket-list-container');
-  if (!container || !currentUser) return;
-
-  container.innerHTML = `
-    <div class="tickets-loading">
-      <i data-lucide="loader-2" class="spin-icon"></i>
-      <span>Loading your tickets...</span>
-    </div>`;
-  lucide.createIcons({ root: container });
-
-  try {
-    const snapshot = await db.collection('bookings')
-      .where('userId', '==', currentUser.uid)
-      .get();
-
-    // Sort newest first client-side — no Firestore index needed
-    const docs = [];
-    snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
-    docs.sort((a, b) => {
-      const ta = a.timestamp ? a.timestamp.toMillis() : 0;
-      const tb = b.timestamp ? b.timestamp.toMillis() : 0;
-      return tb - ta;
-    });
-
-    container.innerHTML = '';
-
-    if (snapshot.empty) {
-      container.innerHTML = `
-        <div class="tickets-empty">
-          <i data-lucide="ticket-x"></i>
-          <span>No bookings yet. Book your first ride!</span>
-        </div>`;
-      lucide.createIcons({ root: container });
-      document.getElementById('stat-total').textContent = '0';
-      document.getElementById('stat-spent').textContent = '₹0';
-      document.getElementById('stat-passengers').textContent = '0';
-      return;
+    if (userWalletBalance < totalFare) {
+        alert("Insufficient wallet balance. Please add money to your wallet.");
+        openWalletModal();
+        return;
     }
 
-    let totalSpent = 0, totalPassengers = 0;
-    const cards = [];
-
-    docs.forEach((d) => {
-      totalSpent += d.totalFare || 0;
-      totalPassengers += d.passengers || 1;
-      const ts = d.timestamp ? d.timestamp.toDate().toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : 'N/A';
-
-      cards.push(`
-        <div class="past-ticket-card">
-          <div class="ptc-top">
-            <div class="ptc-bus">
-              <div class="ptc-bus-num">Bus ${d.busNum || '--'}</div>
-              <div class="ptc-route">${d.routeName || '--'}</div>
-            </div>
-            <span class="ptc-badge">✓ Confirmed</span>
-          </div>
-          <div class="ptc-journey">
-            <div class="ptc-stop">
-              <span class="ptc-stop-label">From</span>
-              <span class="ptc-stop-name">${d.fromStop || '--'}</span>
-            </div>
-            <div class="ptc-arrow"><i data-lucide="arrow-right"></i></div>
-            <div class="ptc-stop right">
-              <span class="ptc-stop-label">To</span>
-              <span class="ptc-stop-name">${d.toStop || '--'}</span>
-            </div>
-          </div>
-          <div class="ptc-bottom">
-            <div class="ptc-meta">
-              <div class="ptc-meta-item"><i data-lucide="calendar"></i>${ts}</div>
-              <div class="ptc-meta-item"><i data-lucide="users"></i>${d.passengers || 1} Passenger${(d.passengers || 1) > 1 ? 's' : ''}</div>
-            </div>
-            <div class="ptc-fare">₹${d.totalFare || 0}</div>
-          </div>
-        </div>`);
+    const userDocRef = db.collection('users').doc(currentUser.uid);
+    db.runTransaction(transaction => {
+      return transaction.get(userDocRef).then(doc => {
+        if (!doc.exists) {
+          throw "User document does not exist!";
+        }
+        const currentDBBalance = doc.data().walletBalance || 0;
+        if (currentDBBalance < totalFare) {
+          throw "Insufficient wallet balance.";
+        }
+        const newBalance = currentDBBalance - totalFare;
+        transaction.update(userDocRef, { walletBalance: newBalance });
+        return newBalance;
+      });
+    }).then(() => {
+      console.log("Booking successful. Fare deducted.");
+      closeBookingModal();
+      showVirtualTicket(currentBookingData, currentPassengers, totalFare);
+    }).catch(error => {
+      console.error("Booking transaction failed: ", error);
+      alert(`Booking failed: ${error}`);
     });
-
-    container.innerHTML = cards.join('');
-    lucide.createIcons({ root: container });
-
-    document.getElementById('stat-total').textContent = docs.length;
-    document.getElementById('stat-spent').textContent = '₹' + totalSpent;
-    document.getElementById('stat-passengers').textContent = totalPassengers;
-
-  } catch (e) {
-    container.innerHTML = `
-      <div class="tickets-empty">
-        <i data-lucide="alert-circle"></i>
-        <span>Failed to load tickets. Check console for a Firestore index link.</span>
-      </div>`;
-    lucide.createIcons({ root: container });
-    console.error('Firestore error:', e);
-  }
-}
-
-// VIRTUAL TICKET
-const ticketOverlay = document.getElementById('ticket-overlay');
-const ticketModal = document.getElementById('ticket-modal');
-const closeTicketBtn = document.getElementById('close-ticket-btn');
-
-function openVirtualTicket(ticketId, data, passengers, fare) {
-  document.getElementById('t-bus-num').textContent = data.busNum;
-  document.getElementById('t-route-name').textContent = data.routeName;
-  document.getElementById('t-from').textContent = data.fromStop;
-  document.getElementById('t-to').textContent = data.toStop;
-  document.getElementById('t-date').textContent = new Date().toLocaleDateString();
-  document.getElementById('t-passengers').textContent = passengers;
-  document.getElementById('t-fare').textContent = '₹' + fare;
-  document.getElementById('t-id').textContent = '#' + ticketId.substring(0,8).toUpperCase();
-  
-  ticketOverlay.classList.add('show');
-  ticketModal.classList.add('show');
-}
-
-function closeVirtualTicket() {
-  ticketOverlay.classList.remove('show');
-  ticketModal.classList.remove('show');
-}
-if(closeTicketBtn) closeTicketBtn.addEventListener('click', closeVirtualTicket);
-if(ticketOverlay) ticketOverlay.addEventListener('click', closeVirtualTicket);
+});

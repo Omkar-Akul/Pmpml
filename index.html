@@ -28,26 +28,22 @@
       <p>Pune PMPML</p>
     </div>
   </div>
-  <div class="header-actions">
-    <button class="map-dashboard-btn" id="map-dashboard-btn">
-      <i data-lucide="map"></i>
-      <span>Map Dashboard</span>
-    </button>
-    <div class="badge"><div class="live-dot"></div> <span id="badge-text">Live</span></div>
-    <button class="wallet-btn" id="wallet-btn" style="display:none;" title="Recharge Wallet">
-      <i data-lucide="wallet"></i>
-      <span id="wallet-balance">₹0</span>
-    </button>
-    <button class="my-tickets-btn" id="my-tickets-btn" style="display:none;" title="My Booked Tickets">
-      <i data-lucide="ticket"></i>
-      <span>My Tickets</span>
-    </button>
-    <button class="login-header-btn" id="login-header-btn">
-      <div class="user-avatar" id="user-avatar" style="display:none;"></div>
-      <i data-lucide="user" id="user-icon-default"></i>
-      <span id="login-text">Login</span>
-    </button>
-  </div>
+    <div class="header-actions">
+        <button class="map-dashboard-btn" id="map-dashboard-btn">
+            <i data-lucide="map"></i>
+            <span>Map Dashboard</span>
+        </button>
+        <div class="badge"><div class="live-dot"></div> <span id="badge-text">Live</span></div>
+        <div class="wallet-container" id="wallet-container" style="display: none;">
+            <i data-lucide="wallet"></i>
+            <span id="wallet-balance">₹0.00</span>
+        </div>
+        <button class="login-header-btn" id="login-header-btn">
+            <div class="user-avatar" id="user-avatar" style="display:none;"></div>
+            <i data-lucide="user" id="user-icon-default"></i>
+            <span id="login-text">Login</span>
+        </button>
+    </div>
 </header>
 
 <div id="map-dashboard" style="display: none;">
@@ -168,7 +164,7 @@
         <div class="wallet-icon"><i data-lucide="wallet"></i></div>
         <h3 id="wallet-title">Demo Wallet</h3>
         <p id="wallet-desc">Your current balance.</p>
-        <div class="balance-display" id="current-balance">₹100</div>
+        <div class="balance-display" id="current-balance">₹100.00</div>
         <div class="add-money-group">
             <input type="number" id="add-money-input" placeholder="Enter amount" value="100">
             <button class="add-money-btn" id="add-money-btn">
@@ -271,55 +267,6 @@
   </div>
 </div>
 
-<!-- Virtual Ticket Modal -->
-<div class="modal-overlay" id="ticket-overlay"></div>
-<div class="ticket-modal" id="ticket-modal">
-  <div class="ticket-content">
-    <div class="ticket-header">
-      <h3 id="ticket-title">Boarding Pass</h3>
-      <div class="ticket-logo"><i data-lucide="bus"></i> PMPML</div>
-    </div>
-    <div class="ticket-body">
-      <div class="ticket-route">
-        <div class="t-bus-num" id="t-bus-num">--</div>
-        <div class="t-route-name" id="t-route-name">--</div>
-      </div>
-      <div class="ticket-journey">
-        <div class="t-stop">
-          <span class="t-label">FROM</span>
-          <span class="t-value" id="t-from">--</span>
-        </div>
-        <div class="t-icon"><i data-lucide="arrow-right"></i></div>
-        <div class="t-stop right">
-          <span class="t-label">TO</span>
-          <span class="t-value" id="t-to">--</span>
-        </div>
-      </div>
-      <div class="ticket-details-grid">
-        <div class="t-detail">
-          <span class="t-label">DATE</span>
-          <span class="t-value" id="t-date">--</span>
-        </div>
-        <div class="t-detail">
-          <span class="t-label">PASSENGERS</span>
-          <span class="t-value" id="t-passengers">--</span>
-        </div>
-        <div class="t-detail">
-          <span class="t-label">FARE PAID</span>
-          <span class="t-value" id="t-fare">--</span>
-        </div>
-      </div>
-    </div>
-    <div class="ticket-footer">
-      <div class="barcode">
-        <i data-lucide="qr-code"></i>
-        <div class="ticket-id" id="t-id">#--</div>
-      </div>
-      <button class="close-ticket-btn" id="close-ticket-btn">Close Pass</button>
-    </div>
-  </div>
-</div>
-
 <!-- Settings Button (Bottom Left) -->
 <button class="settings-btn" id="settings-btn" aria-label="Settings">
   <i data-lucide="settings"></i>
@@ -346,38 +293,6 @@
         <button class="lang-btn active" id="btn-en" onclick="setLang('en')">English</button>
         <button class="lang-btn" id="btn-mr" onclick="setLang('mr')">मराठी</button>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- My Tickets Dashboard -->
-<div class="modal-overlay" id="dashboard-overlay"></div>
-<div class="dashboard-modal" id="dashboard-modal">
-  <div class="dashboard-header">
-    <div class="dashboard-title">
-      <i data-lucide="layout-dashboard"></i>
-      <h2>My Bookings</h2>
-    </div>
-    <button class="close-modal" id="close-dashboard"><i data-lucide="x"></i></button>
-  </div>
-  <div class="dashboard-stats" id="dashboard-stats">
-    <div class="stat-card">
-      <span class="stat-label">Total Trips</span>
-      <span class="stat-value" id="stat-total">0</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-label">Total Spent</span>
-      <span class="stat-value" id="stat-spent">₹0</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-label">Passengers</span>
-      <span class="stat-value" id="stat-passengers">0</span>
-    </div>
-  </div>
-  <div class="ticket-list-container" id="ticket-list-container">
-    <div class="tickets-loading" id="tickets-loading">
-      <i data-lucide="loader-2" class="spin-icon"></i>
-      <span>Loading your tickets...</span>
     </div>
   </div>
 </div>
