@@ -11,6 +11,92 @@ let toSelected = '';
 let activeList = null;
 let activeIndex = -1;
 
+// ===== TRANSLATIONS =====
+const LANG = {
+  en: {
+    pageTitle: 'Alandi Bus Finder – Pune PMPML',
+    badge: 'Live',
+    heroTag: 'Smart Route Search',
+    heroH2Line1: 'Find your ride,',
+    heroH2Line2: 'instantly.',
+    heroDesc: "Search any stop in Alandi's PMPML network and get direct bus routes.",
+    statBuses: 'Bus Routes',
+    statStops: 'Bus Stops',
+    statDirections: 'Directions',
+    cardHeader: 'Plan Your Journey',
+    fromLabel: 'Pickup Location',
+    fromPlaceholder: 'Enter pickup stop...',
+    toLabel: 'Dropoff Location',
+    toPlaceholder: 'Enter dropoff stop...',
+    searchBtn: 'Find Buses',
+    resultsTitle: 'Available Rides',
+    noResultsTitle: 'No Direct Routes',
+    alertBoth: 'Please enter both pickup and dropoff stops.',
+    routeCount1: ' ride',
+    routeCountN: ' rides',
+    outbound: 'Outbound',
+    inbound: 'Inbound',
+    fromLabel2: 'PICKUP',
+    toLabel2: 'DROPOFF',
+    stopBetween1: ' stop',
+    stopBetweenN: ' stops',
+    noDirectMsg: 'No direct rides found',
+    noDirectSub: 'No direct route connects these stops.<br>Try nearby stops or check stop names.',
+    footerText: 'Alandi PMPML Bus Finder &nbsp;·&nbsp; Pune, Maharashtra &nbsp;·&nbsp; Data sourced from official route dataset',
+    settingsTitle: 'Settings',
+    settingTheme: 'Theme',
+    settingLang: 'Language',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    estTime: 'Est. Time',
+    estFare: 'Est. Fare',
+    totalStops: 'Stops',
+    journeyTimeline: 'Journey Timeline'
+  },
+  mr: {
+    pageTitle: 'अलंदी बस शोधक – पुणे PMPML',
+    badge: 'सुरू',
+    heroTag: 'स्मार्ट मार्ग शोध',
+    heroH2Line1: 'तुमचा प्रवास शोधा,',
+    heroH2Line2: 'त्वरित.',
+    heroDesc: 'अलंदीच्या PMPML नेटवर्कमध्ये कोणताही थांबा शोधा आणि थेट बस मार्ग मिळवा.',
+    statBuses: 'बस मार्ग',
+    statStops: 'बस थांबे',
+    statDirections: 'दिशा',
+    cardHeader: 'तुमचा प्रवास नियोजित करा',
+    fromLabel: 'सुरुवातीचे ठिकाण',
+    fromPlaceholder: 'सुरुवातीचा थांबा टाका...',
+    toLabel: 'गंतव्य ठिकाण',
+    toPlaceholder: 'गंतव्य थांबा टाका...',
+    searchBtn: 'बस शोधा',
+    resultsTitle: 'उपलब्ध प्रवास',
+    noResultsTitle: 'थेट मार्ग नाही',
+    alertBoth: 'कृपया सुरुवात आणि गंतव्य दोन्ही थांबे टाका.',
+    routeCount1: ' मार्ग',
+    routeCountN: ' मार्ग',
+    outbound: 'बाहेर जाणारी',
+    inbound: 'आत येणारी',
+    fromLabel2: 'येथून',
+    toLabel2: 'येथे',
+    stopBetween1: ' थांबा',
+    stopBetweenN: ' थांबे',
+    noDirectMsg: 'थेट बस आढळली नाही',
+    noDirectSub: 'या थांब्यांमध्ये कोणताही थेट मार्ग नाही.<br>जवळचे थांबे वापरून पहा.',
+    footerText: 'अलंदी PMPML बस शोधक &nbsp;·&nbsp; पुणे, महाराष्ट्र &nbsp;·&nbsp; अधिकृत मार्ग डेटावरून',
+    settingsTitle: 'सेटिंग्ज',
+    settingTheme: 'थीम',
+    settingLang: 'भाषा',
+    themeLight: 'लाईट',
+    themeDark: 'डार्क',
+    estTime: 'अंदाजित वेळ',
+    estFare: 'अंदाजित भाडे',
+    totalStops: 'थांबे',
+    journeyTimeline: 'प्रवासाची वेळरेषा'
+  }
+};
+
+let currentLang = 'en';
+
 // ===== MAP STATE =====
 let map = null;
 let userMarker = null;
@@ -51,125 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
   updateUniqueStops();
   initMap();
 
-  // Initialize Map Dashboard
-  initMapDashboard();
-
-  // Setup map dashboard button
-  document.getElementById('map-dashboard-btn').addEventListener('click', () => {
-    const mainContent = document.getElementById('main-content');
-    const mapDashboard = document.getElementById('map-dashboard');
-    const isHidden = mapDashboard.style.display === 'none';
-
-    if (isHidden) {
-      mainContent.style.display = 'none';
-      mapDashboard.style.display = 'block';
-      mapDashboardMap.invalidateSize(); // Refresh map size
-    } else {
-      mainContent.style.display = 'block';
-      mapDashboard.style.display = 'none';
-      map.invalidateSize(); // Refresh main map size
-    }
-  });
+  // Fix for mobile map size
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 500);
 });
-
-let mapDashboardMap = null;
-let busMarkers = {};
-
-function initMapDashboard() {
-  const alandi = [18.6751, 73.8890];
-  mapDashboardMap = L.map('map-dashboard-map', {
-    zoomControl: true,
-    attributionControl: false
-  }).setView(alandi, 13);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-  }).addTo(mapDashboardMap);
-
-  startBusSimulation();
-}
-
-function startBusSimulation() {
-    const AVG_SPEED_KMH = 30; // Average speed of a bus in km/h
-    const STOP_DWELL_TIME_MS = 20000; // 20 seconds
-    const UPDATE_INTERVAL_MS = 1000; // Update every second
-
-    // Simulate 20 buses, each with a random starting delay
-    const simulatedBuses = BUS_DATA.slice(0, 20).map((route, index) => {
-        const startDelay = Math.random() * 60000; // Random start delay up to 1 minute
-        return {
-            id: `BUS_${route.bus}_${index}`,
-            route: route,
-            currentStopIndex: 0,
-            status: 'stopped', // 'stopped' or 'en-route'
-            lastUpdateTime: Date.now() + startDelay,
-            timeToNextStop: 0,
-            timeAtCurrentStop: 0,
-        };
-    });
-
-    setInterval(() => {
-        const now = Date.now();
-        simulatedBuses.forEach(bus => {
-            if (now < bus.lastUpdateTime) return; // Skip if it's not time for this bus's life to start
-
-            const deltaTime = now - bus.lastUpdateTime;
-            bus.lastUpdateTime = now;
-
-            if (bus.status === 'stopped') {
-                bus.timeAtCurrentStop += deltaTime;
-                if (bus.timeAtCurrentStop >= STOP_DWELL_TIME_MS) {
-                    // Depart from stop
-                    bus.status = 'en-route';
-                    const nextStopIndex = (bus.currentStopIndex + 1) % bus.route.stops.length;
-                    const start = bus.route.stops[bus.currentStopIndex];
-                    const end = bus.route.stops[nextStopIndex];
-
-                    if (start.lat && start.lng && end.lat && end.lng) {
-                        const distance = getDistance(start.lat, start.lng, end.lat, end.lng);
-                        bus.timeToNextStop = (distance / (AVG_SPEED_KMH / 3600)) * 1000; // in ms
-                    } else {
-                        bus.timeToNextStop = 30000; // Default 30s if no coords
-                    }
-                }
-            }
-
-            if (bus.status === 'en-route') {
-                const startStop = bus.route.stops[bus.currentStopIndex];
-                const endStop = bus.route.stops[(bus.currentStopIndex + 1) % bus.route.stops.length];
-
-                if (bus.timeToNextStop > 0) {
-                    const initialTimeToNextStop = (getDistance(startStop.lat, startStop.lng, endStop.lat, endStop.lng) / (AVG_SPEED_KMH / 3600)) * 1000;
-                    const progress = 1 - (bus.timeToNextStop / initialTimeToNextStop);
-                    bus.timeToNextStop -= deltaTime;
-
-                    if (startStop.lat && startStop.lng && endStop.lat && endStop.lng) {
-                        const lat = startStop.lat + (endStop.lat - startStop.lat) * progress;
-                        const lng = startStop.lng + (endStop.lng - startStop.lng) * progress;
-                        const bearing = getBearing(startStop.lat, startStop.lng, endStop.lat, endStop.lng);
-                        updateBusLocation(bus.id, lat, lng, bus.route.bus, bearing);
-                    }
-
-                    if (bus.timeToNextStop <= 0) {
-                        // Arrived at next stop
-                        bus.status = 'stopped';
-                        bus.currentStopIndex = (bus.currentStopIndex + 1) % bus.route.stops.length;
-                        bus.timeAtCurrentStop = 0;
-                        // Snap to exact stop location
-                        if (endStop.lat && endStop.lng) {
-                             updateBusLocation(bus.id, endStop.lat, endStop.lng, bus.route.bus, getBearing(startStop.lat, startStop.lng, endStop.lat, endStop.lng));
-                        }
-                    }
-                } else {
-                     // Arrived (edge case)
-                    bus.status = 'stopped';
-                    bus.currentStopIndex = (bus.currentStopIndex + 1) % bus.route.stops.length;
-                    bus.timeAtCurrentStop = 0;
-                }
-            }
-        });
-    }, UPDATE_INTERVAL_MS);
-}
 
 // Helper function to calculate distance between two lat/lng points (Haversine formula)
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -230,6 +202,11 @@ function initMap() {
 
   // Map click to select stops
   map.on('click', onMapClick);
+
+  // Aggressive refresh for mobile
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 1000);
 }
 
 // Handle window resize for map
@@ -373,40 +350,19 @@ function drawRouteOnMap(stops) {
 }
 
 // ===== SETTINGS & THEME =====
-const settingsBtn = document.getElementById('settings-btn');
-const closeSettingsBtn = document.getElementById('close-settings');
-const settingsPanel = document.getElementById('settings-panel');
-const settingsOverlay = document.getElementById('settings-overlay');
-const themeBtns = document.querySelectorAll('.theme-btn');
-
 function toggleSettings() {
-  const isShowing = settingsPanel.classList.contains('show');
-  if (isShowing) {
-    settingsPanel.classList.remove('show');
-    settingsOverlay.classList.remove('show');
-  } else {
-    settingsPanel.classList.add('show');
-    settingsOverlay.classList.add('show');
-  }
+  // Redundant with unified sidebar
 }
 
-settingsBtn.addEventListener('click', toggleSettings);
-closeSettingsBtn.addEventListener('click', toggleSettings);
-settingsOverlay.addEventListener('click', toggleSettings);
-
+// Theme Logic
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('pmpml-theme', theme);
+  const themeBtns = document.querySelectorAll('.mini-theme-btn');
   themeBtns.forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-theme-val') === theme);
   });
 }
-
-themeBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    setTheme(btn.getAttribute('data-theme-val'));
-  });
-});
 
 // ===== AUTOCOMPLETE =====
 function filterStops(query) {
@@ -625,7 +581,10 @@ function displayResults(results, from, to) {
     const card = document.createElement('div');
     card.className = 'bus-card';
     card.style.animationDelay = (i * 0.07) + 's';
-    card.onclick = () => openBusDetail(i);
+    card.onclick = () => {
+        console.log("Bus card clicked:", i);
+        window.openBusDetail(i);
+    };
 
     const dirClass = r.direction === 'OUT' ? 'dir-out' : 'dir-in';
     const tl = LANG[currentLang]; 
@@ -733,91 +692,6 @@ function closeBusDetailModal() {
 closeDetail.addEventListener('click', closeBusDetailModal);
 detailOverlay.addEventListener('click', closeBusDetailModal);
 
-// ===== TRANSLATIONS =====
-const LANG = {
-  en: {
-    pageTitle: 'Alandi Bus Finder – Pune PMPML',
-    badge: 'Live',
-    heroTag: 'Smart Route Search',
-    heroH2Line1: 'Find your ride,',
-    heroH2Line2: 'instantly.',
-    heroDesc: "Search any stop in Alandi's PMPML network and get direct bus routes.",
-    statBuses: 'Bus Routes',
-    statStops: 'Bus Stops',
-    statDirections: 'Directions',
-    cardHeader: 'Plan Your Journey',
-    fromLabel: 'Pickup Location',
-    fromPlaceholder: 'Enter pickup stop...',
-    toLabel: 'Dropoff Location',
-    toPlaceholder: 'Enter dropoff stop...',
-    searchBtn: 'Find Buses',
-    resultsTitle: 'Available Rides',
-    noResultsTitle: 'No Direct Routes',
-    alertBoth: 'Please enter both pickup and dropoff stops.',
-    routeCount1: ' ride',
-    routeCountN: ' rides',
-    outbound: 'Outbound',
-    inbound: 'Inbound',
-    fromLabel2: 'PICKUP',
-    toLabel2: 'DROPOFF',
-    stopBetween1: ' stop',
-    stopBetweenN: ' stops',
-    noDirectMsg: 'No direct rides found',
-    noDirectSub: 'No direct route connects these stops.<br>Try nearby stops or check stop names.',
-    footerText: 'Alandi PMPML Bus Finder &nbsp;·&nbsp; Pune, Maharashtra &nbsp;·&nbsp; Data sourced from official route dataset',
-    settingsTitle: 'Settings',
-    settingTheme: 'Theme',
-    settingLang: 'Language',
-    themeLight: 'Light',
-    themeDark: 'Dark',
-    estTime: 'Est. Time',
-    estFare: 'Est. Fare',
-    totalStops: 'Stops',
-    journeyTimeline: 'Journey Timeline'
-  },
-  mr: {
-    pageTitle: 'अलंदी बस शोधक – पुणे PMPML',
-    badge: 'सुरू',
-    heroTag: 'स्मार्ट मार्ग शोध',
-    heroH2Line1: 'तुमचा प्रवास शोधा,',
-    heroH2Line2: 'त्वरित.',
-    heroDesc: 'अलंदीच्या PMPML नेटवर्कमध्ये कोणताही थांबा शोधा आणि थेट बस मार्ग मिळवा.',
-    statBuses: 'बस मार्ग',
-    statStops: 'बस थांबे',
-    statDirections: 'दिशा',
-    cardHeader: 'तुमचा प्रवास नियोजित करा',
-    fromLabel: 'सुरुवातीचे ठिकाण',
-    fromPlaceholder: 'सुरुवातीचा थांबा टाका...',
-    toLabel: 'गंतव्य ठिकाण',
-    toPlaceholder: 'गंतव्य थांबा टाका...',
-    searchBtn: 'बस शोधा',
-    resultsTitle: 'उपलब्ध प्रवास',
-    noResultsTitle: 'थेट मार्ग नाही',
-    alertBoth: 'कृपया सुरुवात आणि गंतव्य दोन्ही थांबे टाका.',
-    routeCount1: ' मार्ग',
-    routeCountN: ' मार्ग',
-    outbound: 'बाहेर जाणारी',
-    inbound: 'आत येणारी',
-    fromLabel2: 'येथून',
-    toLabel2: 'येथे',
-    stopBetween1: ' थांबा',
-    stopBetweenN: ' थांबे',
-    noDirectMsg: 'थेट बस आढळली नाही',
-    noDirectSub: 'या थांब्यांमध्ये कोणताही थेट मार्ग नाही.<br>जवळचे थांबे वापरून पहा.',
-    footerText: 'अलंदी PMPML बस शोधक &nbsp;·&nbsp; पुणे, महाराष्ट्र &nbsp;·&nbsp; अधिकृत मार्ग डेटावरून',
-    settingsTitle: 'सेटिंग्ज',
-    settingTheme: 'थीम',
-    settingLang: 'भाषा',
-    themeLight: 'लाईट',
-    themeDark: 'डार्क',
-    estTime: 'अंदाजित वेळ',
-    estFare: 'अंदाजित भाडे',
-    totalStops: 'थांबे',
-    journeyTimeline: 'प्रवासाची वेळरेषा'
-  }
-};
-
-let currentLang = 'en';
 
 function setLang(lang) {
   currentLang = lang;
@@ -831,9 +705,12 @@ function setLang(lang) {
 
   const t = LANG[lang];
 
-  // Toggle button styles
-  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
-  document.getElementById('btn-mr').classList.toggle('active', lang === 'mr');
+  // Toggle mini lang buttons in sidebar
+  const miniLangBtns = document.querySelectorAll('.mini-lang-btn');
+  miniLangBtns.forEach(btn => {
+    const isTarget = (lang === 'en' && btn.textContent.includes('EN')) || (lang === 'mr' && btn.textContent.includes('मराठी'));
+    btn.classList.toggle('active', isTarget);
+  });
 
   // Page title
   document.title = t.pageTitle;
@@ -858,19 +735,28 @@ function setLang(lang) {
   document.getElementById('to-input').placeholder = t.toPlaceholder;
   document.getElementById('search-btn-text').textContent = t.searchBtn;
 
-  // Footer & Settings
-  document.getElementById('footer-text').innerHTML = t.footerText;
-  document.getElementById('settings-title').textContent = t.settingsTitle;
-  document.getElementById('setting-theme').textContent = t.settingTheme;
-  document.getElementById('setting-lang').textContent = t.settingLang;
-  document.getElementById('theme-light').textContent = t.themeLight;
-  document.getElementById('theme-dark').textContent = t.themeDark;
+  // Footer & Settings in Sidebar
+  const footerText = document.getElementById('footer-text');
+  if(footerText) footerText.innerHTML = t.footerText;
+  
+  const setLabel = document.getElementById('setting-title-label');
+  const themeLabel = document.getElementById('label-theme');
+  const langLabel = document.getElementById('label-lang');
+  
+  if(setLabel) setLabel.textContent = t.settingsTitle;
+  if(themeLabel) themeLabel.textContent = t.settingTheme;
+  if(langLabel) langLabel.textContent = t.settingLang;
 
   // Detail Modal Translations
-  document.getElementById('label-time').textContent = t.estTime;
-  document.getElementById('label-fare').textContent = t.estFare;
-  document.getElementById('label-stops').textContent = t.totalStops;
-  document.getElementById('label-journey').textContent = t.journeyTimeline;
+  const lTime = document.getElementById('label-time');
+  const lFare = document.getElementById('label-fare');
+  const lStops = document.getElementById('label-stops');
+  const lJourney = document.getElementById('label-journey');
+  
+  if(lTime) lTime.textContent = t.estTime;
+  if(lFare) lFare.textContent = t.estFare;
+  if(lStops) lStops.textContent = t.totalStops;
+  if(lJourney) lJourney.textContent = t.journeyTimeline;
 
   // Results title if visible
   const resultsSection = document.getElementById('results-section');
@@ -890,17 +776,20 @@ function setLang(lang) {
 
 // Keyboard enter on button
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && document.activeElement !== fromInput && document.activeElement !== toInput) {
+  if (e.key === 'Enter') {
     searchBuses();
   }
 });
 
 // ===== FIREBASE AUTH & BOOKING =====
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const googleProvider = new firebase.auth.GoogleAuthProvider();
+console.log("PMPML Script: Auth section initializing...");
+if (typeof auth === 'undefined') {
+  console.error("PMPML Script: 'auth' is not defined. Check firebase-config.js!");
+} else {
+  console.log("PMPML Script: 'auth' is ready.");
+}
+
+// Firebase is initialized in firebase-config.js
 
 let currentUser = null;
 const loginHeaderBtn = document.getElementById('login-header-btn');
@@ -947,29 +836,42 @@ let walletUnsubscribe = null; // To listen for wallet changes
 auth.onAuthStateChanged((user) => {
   if (user) {
     currentUser = user;
-    loginText.textContent = user.displayName.split(' ')[0];
-    userAvatar.style.backgroundImage = `url(${user.photoURL})`;
-    userAvatar.style.display = 'block';
-    userIconDefault.style.display = 'none';
+    const menuText = document.getElementById('menu-text');
+    const userAvatar = document.getElementById('user-avatar');
+    const menuIconDefault = document.getElementById('menu-icon-default');
     
-    // Update profile dropdown
-    document.getElementById('dropdown-username').textContent = user.displayName;
-    document.getElementById('dropdown-email').textContent = user.email;
-
-    walletContainer.style.display = 'flex';
+    if(menuText) menuText.textContent = user.displayName.split(' ')[0];
+    if(userAvatar) {
+        userAvatar.style.backgroundImage = `url(${user.photoURL})`;
+        userAvatar.style.display = 'block';
+    }
+    if(menuIconDefault) menuIconDefault.style.display = 'none';
+    
+    // Update Sidebar
+    updateSidebarUI(user);
+    
+    // Setup Wallet
     setupWalletListener(user.uid);
-
-    if(authModal.classList.contains('show')) closeAuthModal();
+    if(walletContainer) walletContainer.style.display = 'flex';
+    if(authModal && authModal.classList.contains('show')) closeAuthModal();
+    
   } else {
     currentUser = null;
-    loginText.textContent = 'Login';
-    userAvatar.style.display = 'none';
-    userIconDefault.style.display = 'block';
-    profileDropdown.style.display = 'none';
+    const menuText = document.getElementById('menu-text');
+    const userAvatar = document.getElementById('user-avatar');
+    const menuIconDefault = document.getElementById('menu-icon-default');
     
-    walletContainer.style.display = 'none';
+    if(menuText) menuText.textContent = "Menu";
+    if(userAvatar) userAvatar.style.display = 'none';
+    if(menuIconDefault) menuIconDefault.style.display = 'block';
+    
+    // Reset Sidebar
+    updateSidebarUI(null);
+    
+    // Reset Wallet
+    if(walletContainer) walletContainer.style.display = 'none';
     if (walletUnsubscribe) {
-      walletUnsubscribe(); // Detach listener on logout
+      walletUnsubscribe();
       walletUnsubscribe = null;
     }
   }
@@ -998,7 +900,8 @@ function setupWalletListener(userId) {
 
 function updateWalletDisplay() {
     const formattedBalance = `₹${userWalletBalance.toFixed(2)}`;
-    walletBalance.textContent = formattedBalance;
+    const sidebarBal = document.getElementById('sidebar-wallet-balance');
+    if (sidebarBal) sidebarBal.textContent = formattedBalance;
     if (currentBalance) {
         currentBalance.textContent = formattedBalance;
     }
@@ -1008,6 +911,11 @@ function openWalletModal() {
     walletOverlay.classList.add('show');
     walletModal.classList.add('show');
 }
+function closeWalletModal() {
+    walletOverlay.classList.remove('show');
+    walletModal.classList.remove('show');
+}
+if(walletContainer) walletContainer.addEventListener('click', openWalletModal);
 closeWallet.addEventListener('click', closeWalletModal);
 walletOverlay.addEventListener('click', closeWalletModal);
 
@@ -1039,15 +947,59 @@ if(addMoneyBtn) {
 }
 
 // Ticket Logic
-function showVirtualTicket(bookingData, passengers, totalFare) {
+function showVirtualTicket(bookingData, passengers, totalFare, bookingId, customTime = null) {
     document.getElementById('ticket-route').textContent = `${bookingData.fromStop} → ${bookingData.toStop}`;
     document.getElementById('ticket-bus-no').textContent = bookingData.busNum;
     document.getElementById('ticket-passengers').textContent = passengers;
     document.getElementById('ticket-fare').textContent = `₹${totalFare.toFixed(2)}`;
 
+    // Calculate Validity (4 Hours)
+    const bookingTime = customTime ? new Date(customTime) : new Date();
+    const expiryTime = new Date(bookingTime.getTime() + 4 * 60 * 60 * 1000);
+    const now = new Date();
+    const isValid = now < expiryTime;
+
+    const expiryStr = expiryTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const validityEl = document.getElementById('ticket-validity');
+    if (validityEl) {
+        validityEl.innerHTML = `
+            <div class="validity-status ${isValid ? 'status-valid' : 'status-expired'}">
+                <i data-lucide="${isValid ? 'check-circle' : 'x-circle'}"></i>
+                <span>${isValid ? 'VALID' : 'EXPIRED'}</span>
+            </div>
+            <div class="validity-time">Valid until ${expiryStr} today</div>
+        `;
+    }
+
+    // Generate real QR data
+    const qrData = `TICKET-${bookingId || 'TEMP'}-${currentUser.uid}`;
+    const qrImg = document.querySelector('.ticket-qr img');
+    if (qrImg) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=150x150`;
+    }
+
     ticketOverlay.classList.add('show');
     ticketModal.classList.add('show');
+    lucide.createIcons({ root: validityEl });
 }
+
+window.openFullTicket = (dataStr) => {
+    const data = JSON.parse(dataStr);
+    showVirtualTicket(data, data.passengers, data.totalFare, data.id, data.timestamp);
+};
+
+window.deleteTicket = async (ticketId) => {
+  if (!confirm("Are you sure you want to remove this ticket from your history?")) return;
+  
+  try {
+    await db.collection('bookings').doc(ticketId).delete();
+    console.log("Ticket deleted:", ticketId);
+    loadMyTickets(); // Refresh the list
+  } catch (e) {
+    console.error("Delete failed:", e);
+    alert("Failed to delete ticket.");
+  }
+};
 
 function closeTicketModal() {
     ticketOverlay.classList.remove('show');
@@ -1056,33 +1008,88 @@ function closeTicketModal() {
 closeTicket.addEventListener('click', closeTicketModal);
 ticketOverlay.addEventListener('click', closeTicketModal);
 
-// Login Button Click
-loginHeaderBtn.addEventListener('click', () => {
-  if (currentUser) {
-    // Toggle dropdown
-    profileDropdown.style.display = profileDropdown.style.display === 'block' ? 'none' : 'block';
-  } else {
-    openAuthModal();
-  }
-});
+// ===== UNIFIED SIDEBAR LOGIC =====
+const menuBtn = document.getElementById('menu-btn');
+const sidebar = document.getElementById('main-sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const closeSidebar = document.getElementById('close-sidebar');
 
-// Close dropdown if clicked outside
-document.addEventListener('click', (e) => {
-    if (currentUser && !loginHeaderBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
-        profileDropdown.style.display = 'none';
-    }
-});
+function toggleSidebar() {
+    sidebar.classList.toggle('show');
+    sidebarOverlay.classList.toggle('show');
+}
 
-document.getElementById('logout-btn').addEventListener('click', () => {
-    if(confirm("Do you want to logout?")) {
-      auth.signOut().then(() => {
-        // This will trigger the onAuthStateChanged listener
-        // which will handle the UI updates.
-        console.log('User signed out');
-      }).catch((error) => {
-        console.error('Sign out error', error);
-      });
+menuBtn.addEventListener('click', toggleSidebar);
+if(closeSidebar) closeSidebar.addEventListener('click', toggleSidebar);
+if(sidebarOverlay) sidebarOverlay.addEventListener('click', toggleSidebar);
+
+// Sidebar Login/Logout/Nav Update
+function updateSidebarUI(user) {
+    const authSection = document.getElementById('sidebar-auth-section');
+    const navSection = document.getElementById('sidebar-nav-section');
+    const logoutFooter = document.getElementById('sidebar-footer-logout');
+    
+    if (user) {
+        document.getElementById('sidebar-username').textContent = user.displayName;
+        document.getElementById('sidebar-email').textContent = user.email;
+        document.getElementById('sidebar-avatar').style.backgroundImage = `url(${user.photoURL})`;
+        
+        if(authSection) authSection.style.display = 'none';
+        if(navSection) navSection.style.display = 'block';
+        if(logoutFooter) logoutFooter.style.display = 'block';
+    } else {
+        document.getElementById('sidebar-username').textContent = "Guest User";
+        document.getElementById('sidebar-email').textContent = "Log in to sync bookings";
+        document.getElementById('sidebar-avatar').style.backgroundImage = 'none';
+        
+        if(authSection) authSection.style.display = 'block';
+        if(navSection) navSection.style.display = 'none';
+        if(logoutFooter) logoutFooter.style.display = 'none';
     }
+}
+
+const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
+if(sidebarLoginBtn) {
+    sidebarLoginBtn.addEventListener('click', () => {
+        openAuthModal();
+        toggleSidebar();
+    });
+}
+
+const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
+if(sidebarLogoutBtn) {
+    sidebarLogoutBtn.addEventListener('click', () => {
+        if(confirm("Do you want to logout?")) {
+            auth.signOut().then(() => {
+                toggleSidebar();
+            });
+        }
+    });
+}
+
+const sidebarTicketsBtn = document.getElementById('sidebar-tickets-btn');
+if(sidebarTicketsBtn) {
+    sidebarTicketsBtn.addEventListener('click', () => {
+        openDashboard();
+        toggleSidebar();
+    });
+}
+
+const sidebarWalletBtn = document.getElementById('sidebar-wallet-btn');
+if(sidebarWalletBtn) {
+    sidebarWalletBtn.addEventListener('click', () => {
+        openWalletModal();
+        toggleSidebar();
+    });
+}
+
+// Settings in Sidebar
+const miniThemeBtns = document.querySelectorAll('.mini-theme-btn');
+miniThemeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        setTheme(btn.getAttribute('data-theme-val'));
+        miniThemeBtns.forEach(b => b.classList.toggle('active', b === btn));
+    });
 });
 
 function openAuthModal() {
@@ -1174,10 +1181,26 @@ confirmBookBtn.addEventListener('click', () => {
         }
         const newBalance = currentDBBalance - totalFare;
         transaction.update(userDocRef, { walletBalance: newBalance });
+
+        // Save the booking to Firestore using Local Time
+        const bookingRef = db.collection('bookings').doc();
+        transaction.set(bookingRef, {
+            userId: currentUser.uid,
+            userName: currentUser.displayName,
+            userEmail: currentUser.email,
+            busNum: currentBookingData.busNum,
+            routeName: currentBookingData.routeName,
+            fromStop: currentBookingData.fromStop,
+            toStop: currentBookingData.toStop,
+            passengers: currentPassengers,
+            totalFare: totalFare,
+            timestamp: firebase.firestore.Timestamp.fromDate(new Date()) // Use Local Device Time
+        });
+
         return newBalance;
       });
     }).then(() => {
-      console.log("Booking successful. Fare deducted.");
+      console.log("Booking successful. Ticket saved to cloud.");
       closeBookingModal();
       showVirtualTicket(currentBookingData, currentPassengers, totalFare);
     }).catch(error => {
@@ -1185,3 +1208,143 @@ confirmBookBtn.addEventListener('click', () => {
       alert(`Booking failed: ${error}`);
     });
 });
+
+// ===== TICKET DASHBOARD =====
+const dashboardOverlay = document.getElementById('dashboard-overlay');
+const dashboardModal  = document.getElementById('dashboard-modal');
+const closeDashboard  = document.getElementById('close-dashboard');
+const myTicketsBtn    = document.getElementById('my-tickets-btn');
+
+function openDashboard() {
+  if (dashboardOverlay && dashboardModal) {
+    dashboardOverlay.classList.add('show');
+    dashboardModal.classList.add('show');
+    loadMyTickets();
+  }
+}
+function closeDashboardModal() {
+  if (dashboardOverlay && dashboardModal) {
+    dashboardOverlay.classList.remove('show');
+    dashboardModal.classList.remove('show');
+  }
+}
+if (myTicketsBtn) myTicketsBtn.addEventListener('click', openDashboard);
+if (closeDashboard) closeDashboard.addEventListener('click', closeDashboardModal);
+if (dashboardOverlay) dashboardOverlay.addEventListener('click', closeDashboardModal);
+
+async function loadMyTickets() {
+  const container = document.getElementById('ticket-list-container');
+  if (!container || !currentUser) return;
+
+  container.innerHTML = `
+    <div class="tickets-loading">
+      <i data-lucide="loader-2" class="spin-icon"></i>
+      <span>Loading your tickets...</span>
+    </div>`;
+  lucide.createIcons({ root: container });
+
+  try {
+    const snapshot = await db.collection('bookings')
+      .where('userId', '==', currentUser.uid)
+      .get();
+
+    container.innerHTML = '';
+
+    if (snapshot.empty) {
+      container.innerHTML = `
+        <div class="tickets-empty">
+          <i data-lucide="ticket-x"></i>
+          <span>No bookings yet. Book your first ride!</span>
+        </div>`;
+      lucide.createIcons({ root: container });
+      document.getElementById('stat-total').textContent = '0';
+      document.getElementById('stat-spent').textContent = '₹0';
+      document.getElementById('stat-passengers').textContent = '0';
+      return;
+    }
+
+    let totalSpent = 0, totalPassengers = 0;
+    const docs = [];
+    snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+    
+    // Sort client-side
+    docs.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
+
+    const cards = docs.map((d) => {
+      totalSpent += d.totalFare || 0;
+      totalPassengers += d.passengers || 1;
+      
+      const bookingTime = d.timestamp ? d.timestamp.toDate() : new Date();
+      const expiryTime = new Date(bookingTime.getTime() + 4 * 60 * 60 * 1000);
+      const now = new Date();
+      const isValid = now < expiryTime;
+
+      const dateStr = bookingTime.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+      const timeStr = bookingTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+      // Pass the data as a JSON string to the onclick handler
+      const ticketData = JSON.stringify({
+          busNum: d.busNum,
+          routeName: d.routeName,
+          fromStop: d.fromStop,
+          toStop: d.toStop,
+          timestamp: bookingTime.getTime(),
+          passengers: d.passengers,
+          totalFare: d.totalFare,
+          id: d.id
+      }).replace(/"/g, '&quot;');
+
+      return `
+        <div class="past-ticket-card" onclick="openFullTicket('${ticketData}')">
+          <div class="ptc-top">
+            <div class="ptc-bus">
+              <div class="ptc-bus-num">Bus ${d.busNum || '--'}</div>
+              <div class="ptc-route">${d.routeName || '--'}</div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="ptc-badge ${isValid ? 'valid' : 'expired'}">
+                ${isValid ? '✓ Valid' : '✕ Expired'}
+              </span>
+              <button class="ptc-delete" onclick="event.stopPropagation(); deleteTicket('${d.id}')" title="Delete Ticket">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+          </div>
+          <div class="ptc-journey">
+            <div class="ptc-stop">
+              <span class="ptc-stop-label">From</span>
+              <span class="ptc-stop-name">${d.fromStop || '--'}</span>
+            </div>
+            <div class="ptc-arrow"><i data-lucide="arrow-right"></i></div>
+            <div class="ptc-stop right">
+              <span class="ptc-stop-label">To</span>
+              <span class="ptc-stop-name">${d.toStop || '--'}</span>
+            </div>
+          </div>
+          <div class="ptc-bottom">
+            <div class="ptc-meta">
+              <div class="ptc-meta-item"><i data-lucide="calendar"></i>${dateStr}, ${timeStr}</div>
+              <div class="ptc-meta-item"><i data-lucide="users"></i>${d.passengers || 1} Pass</div>
+            </div>
+            <div class="ptc-fare">₹${d.totalFare || 0}</div>
+          </div>
+        </div>`;
+    });
+
+    container.innerHTML = cards.join('');
+    lucide.createIcons({ root: container });
+
+    document.getElementById('stat-total').textContent = docs.length;
+    document.getElementById('stat-spent').textContent = '₹' + totalSpent;
+    document.getElementById('stat-passengers').textContent = totalPassengers;
+
+  } catch (e) {
+    container.innerHTML = `
+      <div class="tickets-empty">
+        <i data-lucide="alert-circle"></i>
+        <span>Failed to load tickets.</span>
+      </div>`;
+    lucide.createIcons({ root: container });
+    console.error('Firestore error:', e);
+  }
+}

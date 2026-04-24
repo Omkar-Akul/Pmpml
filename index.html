@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bus Finder – Pune PMPML</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -29,36 +30,85 @@
     </div>
   </div>
     <div class="header-actions">
-        <button class="map-dashboard-btn" id="map-dashboard-btn">
-            <i data-lucide="map"></i>
-            <span>Map Dashboard</span>
-        </button>
         <div class="badge"><div class="live-dot"></div> <span id="badge-text">Live</span></div>
-        <div class="wallet-container" id="wallet-container" style="display: none;">
-            <i data-lucide="wallet"></i>
-            <span id="wallet-balance">₹0.00</span>
-        </div>
-        <div class="login-header-btn" id="login-header-btn">
+        <div class="menu-btn" id="menu-btn">
             <div class="user-avatar" id="user-avatar" style="display:none;"></div>
-            <i data-lucide="user" id="user-icon-default"></i>
-            <span id="login-text">Login</span>
-            <div class="profile-dropdown" id="profile-dropdown">
-                <div class="profile-dropdown-header">
-                    <div class="username" id="dropdown-username"></div>
-                    <div class="email" id="dropdown-email"></div>
-                </div>
-                <a href="wallet.html" class="profile-dropdown-item">
-                    <i data-lucide="wallet"></i>
+            <i data-lucide="menu" id="menu-icon-default"></i>
+            <span id="menu-text">Menu</span>
+        </div>
+    </div>
+</header>
+
+<!-- Unified Sidebar -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="sidebar" id="main-sidebar">
+    <div class="sidebar-header">
+        <div class="user-profile-section" id="sidebar-user-section">
+            <div class="sidebar-avatar" id="sidebar-avatar"></div>
+            <div class="sidebar-user-info">
+                <div class="username" id="sidebar-username">Guest User</div>
+                <div class="email" id="sidebar-email">Log in to sync bookings</div>
+            </div>
+        </div>
+        <button class="close-sidebar" id="close-sidebar"><i data-lucide="x"></i></button>
+    </div>
+
+    <div class="sidebar-content">
+        <!-- Auth Section for Guests -->
+        <div id="sidebar-auth-section">
+            <button class="sidebar-btn primary" id="sidebar-login-btn">
+                <i data-lucide="log-in"></i> <span id="label-login">Login with Google</span>
+            </button>
+        </div>
+
+        <!-- Navigation Section -->
+        <div class="sidebar-group" id="sidebar-nav-section" style="display: none;">
+            <div class="sidebar-group-label">Navigation</div>
+            <div class="sidebar-item" id="sidebar-tickets-btn">
+                <i data-lucide="ticket"></i> <span>My Bookings</span>
+            </div>
+            <div class="sidebar-item" id="sidebar-wallet-btn">
+                <i data-lucide="wallet"></i> 
+                <div class="item-between">
                     <span>My Wallet</span>
-                </a>
-                <div class="profile-dropdown-item" id="logout-btn">
-                    <i data-lucide="log-out"></i>
-                    <span>Logout</span>
+                    <span class="sidebar-balance" id="sidebar-wallet-balance">₹0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="sidebar-group">
+            <div class="sidebar-group-label" id="setting-title-label">Settings</div>
+            <div class="sidebar-item no-hover">
+                <i data-lucide="sun"></i>
+                <div class="item-between">
+                    <span id="label-theme">Theme</span>
+                    <div class="theme-toggle-mini">
+                        <button class="mini-theme-btn active" data-theme-val="light"><i data-lucide="sun"></i></button>
+                        <button class="mini-theme-btn" data-theme-val="dark"><i data-lucide="moon"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-item no-hover">
+                <i data-lucide="languages"></i>
+                <div class="item-between">
+                    <span id="label-lang">Language</span>
+                    <div class="lang-toggle-mini">
+                        <button class="mini-lang-btn active" onclick="setLang('en')">EN</button>
+                        <button class="mini-lang-btn" onclick="setLang('mr')">मराठी</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</header>
+
+    <div class="sidebar-footer" id="sidebar-footer-logout" style="display: none;">
+        <button class="sidebar-logout-btn" id="sidebar-logout-btn">
+            <i data-lucide="log-out"></i> <span>Logout</span>
+        </button>
+    </div>
+</div>
+
 
 <main id="main-content">
   <div class="hero-container">
@@ -175,6 +225,9 @@
             <div class="ticket-title">Virtual Ticket</div>
         </div>
         <div class="ticket-body">
+            <div class="ticket-validity" id="ticket-validity">
+            <!-- Validity status injected here -->
+            </div>
             <div class="ticket-route" id="ticket-route"></div>
             <div class="ticket-details-grid">
                 <div>
@@ -199,6 +252,52 @@
         </div>
         <button class="close-modal" id="close-ticket"><i data-lucide="x"></i></button>
     </div>
+</div>
+
+<div class="modal-overlay" id="wallet-overlay"></div>
+<div class="wallet-modal" id="wallet-modal">
+    <button class="close-modal" id="close-wallet"><i data-lucide="x"></i></button>
+    <div class="wallet-content">
+        <div class="wallet-icon"><i data-lucide="wallet"></i></div>
+        <h3 id="wallet-title">Demo Wallet</h3>
+        <p id="wallet-desc">Your current balance.</p>
+        <div class="balance-display" id="current-balance">₹100</div>
+        <div class="add-money-group">
+            <input type="number" id="add-money-input" placeholder="Enter amount" value="100">
+            <button class="add-money-btn" id="add-money-btn">
+                <i data-lucide="plus-circle"></i>
+                <span>Add Demo Money</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="dashboard-overlay"></div>
+<div class="dashboard-modal" id="dashboard-modal">
+  <div class="dashboard-header">
+    <div class="dashboard-title">
+      <i data-lucide="ticket"></i>
+      <h2>My Booked Tickets</h2>
+    </div>
+    <button class="close-modal" id="close-dashboard"><i data-lucide="x"></i></button>
+  </div>
+  <div class="dashboard-stats">
+    <div class="stat-card">
+      <span class="stat-label">Total Rides</span>
+      <span class="stat-value" id="stat-total">0</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Spent</span>
+      <span class="stat-value" id="stat-spent">₹0</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Passengers</span>
+      <span class="stat-value" id="stat-passengers">0</span>
+    </div>
+  </div>
+  <div class="ticket-list-container" id="ticket-list-container">
+    <!-- Tickets injected here -->
+  </div>
 </div>
 
 <div class="modal-overlay" id="booking-overlay"></div>
@@ -259,35 +358,9 @@
   </div>
 </div>
 
-<!-- Settings Button (Bottom Left) -->
-<button class="settings-btn" id="settings-btn" aria-label="Settings">
-  <i data-lucide="settings"></i>
-</button>
-
-<!-- Settings Panel -->
-<div class="settings-overlay" id="settings-overlay"></div>
-<div class="settings-panel" id="settings-panel">
-  <div class="settings-header">
-    <h3 id="settings-title">Settings</h3>
-    <button class="close-settings" id="close-settings"><i data-lucide="x"></i></button>
-  </div>
-  <div class="settings-content">
-    <div class="setting-item">
-      <span id="setting-theme">Theme</span>
-      <div class="theme-toggle" id="theme-toggle">
-        <button class="theme-btn" data-theme-val="light"><i data-lucide="sun"></i> <span id="theme-light">Light</span></button>
-        <button class="theme-btn active" data-theme-val="dark"><i data-lucide="moon"></i> <span id="theme-dark">Dark</span></button>
-      </div>
-    </div>
-    <div class="setting-item">
-      <span id="setting-lang">Language</span>
-      <div class="lang-toggle">
-        <button class="lang-btn active" id="btn-en" onclick="setLang('en')">English</button>
-        <button class="lang-btn" id="btn-mr" onclick="setLang('mr')">मराठी</button>
-      </div>
-    </div>
-  </div>
-</div>
+<footer>
+  <p id="footer-text"></p>
+</footer>
 
 <script src="firebase-config.js"></script>
 <script src="data.js"></script>
