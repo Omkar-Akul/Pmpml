@@ -927,12 +927,19 @@ auth.onAuthStateChanged((user) => {
     userAvatar.style.backgroundImage = `url(${user.photoURL})`;
     userAvatar.style.display = 'block';
     userIconDefault.style.display = 'none';
+    
+    // Show wallet
+    walletContainer.style.display = 'flex';
+    initializeWallet();
+
     if(authModal.classList.contains('show')) closeAuthModal();
   } else {
     currentUser = null;
     loginText.textContent = 'Login';
     userAvatar.style.display = 'none';
     userIconDefault.style.display = 'block';
+    // Hide wallet
+    walletContainer.style.display = 'none';
   }
 });
 
@@ -968,73 +975,64 @@ googleLoginBtn.addEventListener('click', () => {
   });
 });
 
-// Booking Modal Logic
-window.openBooking = function(busNum, routeName, fromStop, toStop) {
-  if (!currentUser) {
-    openAuthModal();
-    return;
-  }
-  currentBookingData = { busNum, routeName, fromStop, toStop };
-  currentPassengers = 1;
-  passengerNum.textContent = currentPassengers;
-  
-  bookingDetails.innerHTML = `
-    <div class="route-name">Bus ${busNum} - ${routeName}</div>
-    <div class="stops">
-      <i data-lucide="map-pin"></i> ${fromStop} <i data-lucide="arrow-right"></i> ${toStop}
-    </div>
-  `;
-  lucide.createIcons({ root: bookingDetails });
-  
-  bookingOverlay.classList.add('show');
-  bookingModal.classList.add('show');
-};
+// ===== Wallet & Ticket Elements =====
+const walletContainer = document.getElementById('wallet-container');
+const walletBalance = document.getElementById('wallet-balance');
+const walletOverlay = document.getElementById('wallet-overlay');
+const walletModal = document.getElementById('wallet-modal');
+const closeWallet = document.getElementById('close-wallet');
+const currentBalance = document.getElementById('current-balance');
+const addMoneyInput = document.getElementById('add-money-input');
+const addMoneyBtn = document.getElementById('add-money-btn');
 
-function closeBookingModal() {
-  bookingOverlay.classList.remove('show');
-  bookingModal.classList.remove('show');
+const ticketOverlay = document.getElementById('ticket-overlay');
+const ticketModal = document.getElementById('ticket-modal');
+const closeTicket = document.getElementById('close-ticket');
+
+let userWalletBalance = 0;
+
+// ===== Wallet Logic =====
+function initializeWallet() {
+    const savedBalance = localStorage.getItem('demoWalletBalance');
+    if (savedBalance) {
+        userWalletBalance = parseFloat(savedBalance);
+    } else {
+        userWalletBalance = 100; // Initial demo balance
+        localStorage.setItem('demoWalletBalance', userWalletBalance);
+    }
+    updateWalletDisplay();
 }
-closeBooking.addEventListener('click', closeBookingModal);
-bookingOverlay.addEventListener('click', closeBookingModal);
 
-incPassenger.addEventListener('click', () => {
-  if(currentPassengers < 10) {
-    currentPassengers++;
-    passengerNum.textContent = currentPassengers;
-  }
-});
-decPassenger.addEventListener('click', () => {
-  if(currentPassengers > 1) {
-    currentPassengers--;
-    passengerNum.textContent = currentPassengers;
-  }
-});
+function updateWalletDisplay() {
+    const formattedBalance = `₹${userWalletBalance.toFixed(2)}`;
+    walletBalance.textContent = formattedBalance;
+    currentBalance.textContent = formattedBalance;
+}
 
-confirmBookBtn.addEventListener('click', async () => {
-  if(!currentUser || !currentBookingData) return;
-  const ogText = confirmBookBtn.textContent;
-  confirmBookBtn.textContent = 'Booking...';
-  confirmBookBtn.disabled = true;
+function openWalletModal() {
+    walletOverlay.classList.add('show');
+    walletModal.classList.add('show');
+}
 
-  try {
-    await db.collection('bookings').add({
-      userId: currentUser.uid,
-      userName: currentUser.displayName,
-      userEmail: currentUser.email,
-      busNum: currentBookingData.busNum,
-      routeName: currentBookingData.routeName,
-      fromStop: currentBookingData.fromStop,
-      toStop: currentBookingData.toStop,
-      passengers: currentPassengers,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    
-    alert("Ticket Booked Successfully!");
-    closeBookingModal();
-  } catch(e) {
-    alert("Failed to book: " + e.message);
-  } finally {
-    confirmBookBtn.textContent = ogText;
-    confirmBookBtn.disabled = false;
-  }
+function closeWalletModal() {
+    walletOverlay.classList.remove('show');
+    walletModal.classList.remove('show');
+}
+
+walletContainer.addEventListener('click', openWalletModal);
+closeWallet.addEventListener('click', closeWalletModal);
+walletOverlay.addEventListener('click', closeWalletModal);
+
+addMoneyBtn.addEventListener('click', () => {
+    const amountToAdd = parseFloat(addMoneyInput.value);
+    if (isNaN(amountToAdd) || amountToAdd <= 0) {
+        alert("Please enter a valid amount.");
+        return;
+    }
+    userWalletBalance += amountToAdd;
+    localStorage.setItem('demoWalletBalance', userWalletBalance);
+    updateWalletDisplay();
+    addMoneyInput.value = '100';
+    // Optional: show a success message
+    closeWalletModal();
 });

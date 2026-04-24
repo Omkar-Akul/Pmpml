@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alandi Bus Finder – Pune PMPML</title>
+<title>Bus Finder – Pune PMPML</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <!-- Leaflet CSS -->
@@ -63,7 +63,7 @@
     </div>
 
     <div class="hero-image">
-      <img src="bus_image.png" alt="Premium Luxury Bus">
+      <img src="pmpml.jpg" alt="Premium Luxury Bus">
     </div>
   </div>
 
@@ -150,6 +150,58 @@
       <span id="google-btn-text">Continue with Google</span>
     </button>
   </div>
+</div>
+
+<div class="modal-overlay" id="wallet-overlay"></div>
+<div class="wallet-modal" id="wallet-modal">
+    <button class="close-modal" id="close-wallet"><i data-lucide="x"></i></button>
+    <div class="wallet-content">
+        <div class="wallet-icon"><i data-lucide="wallet"></i></div>
+        <h3 id="wallet-title">Demo Wallet</h3>
+        <p id="wallet-desc">Your current balance.</p>
+        <div class="balance-display" id="current-balance">₹100</div>
+        <div class="add-money-group">
+            <input type="number" id="add-money-input" placeholder="Enter amount" value="100">
+            <button class="add-money-btn" id="add-money-btn">
+                <i data-lucide="plus-circle"></i>
+                <span>Add Demo Money</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="ticket-overlay"></div>
+<div class="ticket-modal" id="ticket-modal">
+    <div class="ticket-content">
+        <div class="ticket-header">
+            <div class="ticket-logo"><i data-lucide="bus"></i> AlandiBus</div>
+            <div class="ticket-title">Virtual Ticket</div>
+        </div>
+        <div class="ticket-body">
+            <div class="ticket-route" id="ticket-route"></div>
+            <div class="ticket-details-grid">
+                <div>
+                    <div class="ticket-label">Bus No.</div>
+                    <div class="ticket-value" id="ticket-bus-no"></div>
+                </div>
+                <div>
+                    <div class="ticket-label">Passengers</div>
+                    <div class="ticket-value" id="ticket-passengers"></div>
+                </div>
+                <div>
+                    <div class="ticket-label">Total Fare</div>
+                    <div class="ticket-value" id="ticket-fare"></div>
+                </div>
+            </div>
+            <div class="ticket-qr">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?data=PMPML-Ticket-Success&size=120x120" alt="QR Code">
+            </div>
+            <div class="ticket-footer">
+                Valid for 2 hours from time of booking.
+            </div>
+        </div>
+        <button class="close-modal" id="close-ticket"><i data-lucide="x"></i></button>
+    </div>
 </div>
 
 <div class="modal-overlay" id="booking-overlay"></div>
