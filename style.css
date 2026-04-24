@@ -1313,20 +1313,94 @@ footer {
 
 /* MOBILE */
 @media (max-width: 600px) {
-  header { padding: 20px 20px 0; }
-  .search-card { padding: 20px; }
-  .hero { padding: 40px 20px 20px; }
-  .stats { gap: 24px; }
-  .settings-btn { bottom: 20px; left: 20px; }
-  .settings-panel { width: 85%; left: -85%; }
-  
+  /* Header */
+  header { padding: 12px 14px 0; gap: 8px; }
+  .header-actions { gap: 6px; }
+
+  /* Collapse My Tickets & Wallet labels on small phones */
+  .my-tickets-btn span,
+  .wallet-btn span { display: none; }
+  .my-tickets-btn { padding: 7px 10px; border-radius: 50%; }
+  .wallet-btn { padding: 7px 10px; border-radius: 50%; }
+
+  /* Logo shrink */
+  .logo-text h1 { font-size: 16px; }
+  .logo-text p  { font-size: 11px; }
+
+  /* General */
+  .search-card { padding: 18px; }
+  .hero { padding: 36px 16px 16px; }
+  .stats { gap: 16px; }
+  .settings-btn { bottom: 16px; left: 16px; }
+  .settings-panel { width: 92%; left: -92%; }
+
   .map-section {
     width: 100%;
-    height: 300px;
-    margin: 24px 0;
+    height: 260px;
+    margin: 20px 0;
+    border-radius: 14px;
+  }
+
+  /* Auth / Booking modals go full width */
+  .auth-modal, .booking-modal {
+    width: 96%;
+    max-width: 100%;
     border-radius: 16px;
   }
+
+  /* Virtual Ticket */
+  .ticket-modal {
+    width: 96%;
+  }
+
+  /* Dashboard full-screen on mobile */
+  .dashboard-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    height: 100%;
+    top: 0; left: 0;
+    transform: translateY(100%);
+    border-radius: 0;
+  }
+  .dashboard-modal.show {
+    transform: translateY(0);
+  }
+
+  /* Stats: 1 column on very small, 3 columns on larger phones */
+  .dashboard-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 12px 16px;
+  }
+  .stat-card { padding: 10px 6px; }
+  .stat-value { font-size: 18px; }
+  .stat-label { font-size: 10px; }
+
+  /* Ticket list padding */
+  .ticket-list-container { padding: 14px 16px; gap: 12px; }
+
+  /* Past ticket card */
+  .past-ticket-card { padding: 14px; gap: 10px; }
+  .ptc-bus-num { font-size: 17px; }
+  .ptc-bottom { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .ptc-fare { font-size: 15px; }
+
+  /* Dashboard header */
+  .dashboard-header { padding: 16px 18px; }
+  .dashboard-title h2 { font-size: 16px; }
 }
+
+@media (max-width: 380px) {
+  /* Ultra-small phones: wallet balance hidden, icon only */
+  #wallet-balance { display: none; }
+  .wallet-btn { gap: 0; }
+
+  /* Stats: stack to single column */
+  .dashboard-stats { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .stat-value { font-size: 16px; }
+}
+
 
 /* WALLET BUTTON */
 .wallet-btn {
