@@ -136,11 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Map
   updateUniqueStops();
   initMap();
-
-  // Fix for mobile map size
-  setTimeout(() => {
-    if (map) map.invalidateSize();
-  }, 500);
+  
+  // Aggressive fix for mobile map rendering
+  const refreshMap = () => { if (map) map.invalidateSize(); };
+  setTimeout(refreshMap, 300);
+  setTimeout(refreshMap, 1000);
+  setTimeout(refreshMap, 2500);
+  window.addEventListener('resize', refreshMap);
 });
 
 // Helper function to calculate distance between two lat/lng points (Haversine formula)

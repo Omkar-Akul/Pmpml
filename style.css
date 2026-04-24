@@ -1503,19 +1503,20 @@ footer {
 
 .sidebar {
   position: fixed;
-  top: 0; left: -320px;
-  width: 320px;
+  top: 0; left: 0;
+  width: 280px;
   height: 100%;
   background: var(--surface);
   border-right: 1px solid var(--border);
   z-index: 2000;
   display: flex;
   flex-direction: column;
+  transform: translateX(-100%);
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 20px 0 50px rgba(0,0,0,0.1);
 }
 .sidebar.show {
-  transform: translateX(320px);
+  transform: translateX(0);
 }
 
 .sidebar-header {
